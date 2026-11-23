@@ -1,0 +1,964 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EFO-Plutchik 0.5.0</title>
+<style>
+body { font-family: system-ui, sans-serif; line-height: 1.55; max-width: 54rem; margin: 0 auto; padding: 1rem; color: #1b1b1b; background: #fff; }
+h2 { border-bottom: 1px solid #ccc; padding-bottom: .2rem; margin-top: 2.5rem; }
+article { border-top: 1px solid #eee; padding: .6rem 0; }
+article:target { background: #fff8d6; }
+h3 { margin: .2rem 0; }
+.ja { color: #555; font-weight: normal; }
+.iri { margin: 0; font-size: .9rem; color: #555; }
+dl { display: grid; grid-template-columns: max-content 1fr; gap: .15rem 1rem; font-size: .9rem; margin: .4rem 0 0; }
+dt { color: #555; } dd { margin: 0; overflow-wrap: anywhere; }
+@media (prefers-color-scheme: dark) {
+  body { color: #e6e6e6; background: #161616; } a { color: #8ab4f8; }
+  .ja, .iri, dt { color: #aaa; } article { border-color: #333; } h2 { border-color: #444; }
+  article:target { background: #3a3413; }
+}
+</style>
+</head>
+<body>
+<h1>EFO-Plutchik <small>0.5.0</small></h1>
+<p>An EFO (Emotion Frames Ontology) compatible module formalizing Plutchik&#x27;s wheel of emotions: 8 basic emotions with their wheel positions, adjacencies and 4 opposition pairs, 16 intensity variants (low / high), 24 primary, secondary and tertiary dyads, a vocabulary for valence-arousal-dominance readings, and derivation rules for inferring compound emotions from intensity readings.</p>
+<dl>
+<dt>Namespace</dt><dd><code>https://w3id.org/efo-plutchik#</code> (prefix <code>plu:</code>)</dd>
+<dt>Version IRI</dt><dd><code>https://w3id.org/efo-plutchik/0.5.0</code></dd>
+<dt>Modified</dt><dd>2026-11-14</dd>
+<dt>License</dt><dd><a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a></dd>
+<dt>Turtle</dt><dd><a href="efo-plutchik.ttl">efo-plutchik.ttl</a> (current); by version: <a href="0.5.0/efo-plutchik.ttl">0.5.0</a>, <a href="0.4.0/efo-plutchik.ttl">0.4.0</a></dd>
+<dt>Source</dt><dd><a href="https://github.com/kotafuse-labs/efo-plutchik">https://github.com/kotafuse-labs/efo-plutchik</a> (SHACL shapes, competency questions, label mappings, validation code)</dd>
+</dl>
+<nav><ul>
+<li><a href="#sec-classes">Classes</a> (12)</li>
+<li><a href="#sec-object-properties">Object properties</a> (13)</li>
+<li><a href="#sec-datatype-properties">Datatype properties</a> (10)</li>
+<li><a href="#sec-basic-emotions">Basic emotions</a> (8)</li>
+<li><a href="#sec-intensity-variants">Intensity variants</a> (16)</li>
+<li><a href="#sec-primary-dyads">Primary dyads</a> (8)</li>
+<li><a href="#sec-secondary-dyads">Secondary dyads</a> (8)</li>
+<li><a href="#sec-tertiary-dyads">Tertiary dyads</a> (8)</li>
+<li><a href="#sec-intensity-levels">Intensity levels</a> (3)</li>
+<li><a href="#sec-derivation-rules">Derivation rules</a> (7)</li>
+</ul></nav>
+<section><h2 id="sec-classes">Classes</h2>
+<article id="BasicEmotion">
+<h3>Basic Emotion <span class="ja" lang="ja">基本感情</span></h3>
+<p class="iri"><code>plu:BasicEmotion</code> · owl:Class</p>
+<p>One of the eight primary emotions of Plutchik&#x27;s wheel (Joy, Trust, Fear, Surprise, Sadness, Disgust, Anger, Anticipation), arranged in four bipolar opposition pairs; each is the medium-intensity form of its petal.</p>
+<p class="ja" lang="ja">Plutchik の wheel の 8 つの基本感情（喜び・信頼・恐れ・驚き・悲しみ・嫌悪・怒り・期待）。4 組の対極をなし、それぞれが花弁の中程度の強度にあたる。</p>
+<dl>
+<dt>owl:disjointWith</dt><dd><a href="#CompoundEmotion">plu:CompoundEmotion</a></dd>
+<dt>rdfs:subClassOf</dt><dd><a href="#PlutchikEmotion">plu:PlutchikEmotion</a></dd>
+</dl>
+</article>
+<article id="CompoundEmotion">
+<h3>Compound Emotion <span class="ja" lang="ja">複合感情</span></h3>
+<p class="iri"><code>plu:CompoundEmotion</code> · owl:Class</p>
+<p>An emotion that arises from the combination of two or more basic emotions.</p>
+<p class="ja" lang="ja">2 つ以上の基本感情の組み合わせから生じる感情。</p>
+<dl>
+<dt>rdfs:subClassOf</dt><dd><a href="#PlutchikEmotion">plu:PlutchikEmotion</a></dd>
+</dl>
+</article>
+<article id="DerivationRule">
+<h3>Derivation Rule <span class="ja" lang="ja">導出規則</span></h3>
+<p class="iri"><code>plu:DerivationRule</code> · owl:Class</p>
+<p>A rule that derives compound-emotion occurrences from basic-emotion intensity readings, parameterised by an activation threshold.</p>
+<p class="ja" lang="ja">基本感情の強度の読み取り値から複合感情の事例を導く規則。活性化の閾値をパラメータに持つ。</p>
+</article>
+<article id="Dyad">
+<h3>Dyad <span class="ja" lang="ja">dyad（二項複合感情）</span></h3>
+<p class="iri"><code>plu:Dyad</code> · owl:Class</p>
+<p>A compound emotion formed by combining exactly two basic emotions that are not opposites.</p>
+<p class="ja" lang="ja">対極でない 2 つの基本感情をちょうど組み合わせてできる複合感情。</p>
+<dl>
+<dt>rdfs:subClassOf</dt><dd><a href="#CompoundEmotion">plu:CompoundEmotion</a></dd>
+</dl>
+</article>
+<article id="IntensityLevel">
+<h3>Intensity Level <span class="ja" lang="ja">強度段階</span></h3>
+<p class="iri"><code>plu:IntensityLevel</code> · owl:Class</p>
+<p>One of the three ordered intensity levels of Plutchik&#x27;s wheel (low, medium, high), corresponding to its outer, middle and inner rings.</p>
+<p class="ja" lang="ja">Plutchik の wheel の順序づいた 3 つの強度段階（弱・中・強）。外側・中間・内側の環に対応する。</p>
+</article>
+<article id="IntensityReading">
+<h3>Intensity Reading <span class="ja" lang="ja">強度の読み取り値</span></h3>
+<p class="iri"><code>plu:IntensityReading</code> · owl:Class</p>
+<p>A quantified measurement of the intensity of a Plutchik emotion within an emotion situation.</p>
+<p class="ja" lang="ja">感情の状況における Plutchik の感情の強度を数値で測ったもの。</p>
+</article>
+<article id="IntensityVariant">
+<h3>Intensity Variant <span class="ja" lang="ja">強度の変種</span></h3>
+<p class="iri"><code>plu:IntensityVariant</code> · owl:Class</p>
+<p>A low- or high-intensity form of a basic emotion on Plutchik&#x27;s wheel (e.g. serenity and ecstasy for joy).</p>
+<p class="ja" lang="ja">Plutchik の wheel における基本感情の弱い形または強い形（例: 喜びに対する平穏と恍惚）。</p>
+<dl>
+<dt>rdfs:subClassOf</dt><dd><a href="#PlutchikEmotion">plu:PlutchikEmotion</a></dd>
+</dl>
+</article>
+<article id="PlutchikEmotion">
+<h3>Plutchik Emotion <span class="ja" lang="ja">Plutchik の感情</span></h3>
+<p class="iri"><code>plu:PlutchikEmotion</code> · owl:Class</p>
+<p>Any emotion in Plutchik&#x27;s model of affect; the common superclass of basic emotions, their intensity variants and compound emotions.</p>
+<p class="ja" lang="ja">Plutchik の感情モデルに含まれる感情。基本感情・その強度の変種・複合感情の共通の上位クラス。</p>
+<dl>
+<dt>rdfs:subClassOf</dt><dd><a href="http://www.ontologydesignpatterns.org/ont/emotions/EmoCore.owl#Emotion">emo:Emotion</a></dd>
+</dl>
+</article>
+<article id="PrimaryDyad">
+<h3>Primary Dyad <span class="ja" lang="ja">一次 dyad</span></h3>
+<p class="iri"><code>plu:PrimaryDyad</code> · owl:Class</p>
+<p>A dyad formed from two adjacent basic emotions on Plutchik&#x27;s wheel; there are eight primary dyads.</p>
+<p class="ja" lang="ja">wheel 上で隣り合う 2 つの基本感情からなる dyad。8 個ある。</p>
+<dl>
+<dt>rdfs:subClassOf</dt><dd><a href="#Dyad">plu:Dyad</a></dd>
+</dl>
+</article>
+<article id="SecondaryDyad">
+<h3>Secondary Dyad <span class="ja" lang="ja">二次 dyad</span></h3>
+<p class="iri"><code>plu:SecondaryDyad</code> · owl:Class</p>
+<p>A dyad formed from two basic emotions one step apart on Plutchik&#x27;s wheel; there are eight secondary dyads.</p>
+<p class="ja" lang="ja">wheel 上で 1 つおきの 2 つの基本感情からなる dyad。8 個ある。</p>
+<dl>
+<dt>rdfs:subClassOf</dt><dd><a href="#Dyad">plu:Dyad</a></dd>
+</dl>
+</article>
+<article id="TertiaryDyad">
+<h3>Tertiary Dyad <span class="ja" lang="ja">三次 dyad</span></h3>
+<p class="iri"><code>plu:TertiaryDyad</code> · owl:Class</p>
+<p>A dyad formed from two basic emotions two steps apart on Plutchik&#x27;s wheel; there are eight tertiary dyads.</p>
+<p class="ja" lang="ja">wheel 上で 2 つおきの 2 つの基本感情からなる dyad。8 個ある。</p>
+<dl>
+<dt>rdfs:subClassOf</dt><dd><a href="#Dyad">plu:Dyad</a></dd>
+</dl>
+</article>
+<article id="VADReading">
+<h3>VAD Reading <span class="ja" lang="ja">VAD の読み取り値</span></h3>
+<p class="iri"><code>plu:VADReading</code> · owl:Class</p>
+<p>A valence-arousal-dominance rating of a Plutchik emotion term taken from an external lexicon; the lexicon and the looked-up word are recorded as provenance.</p>
+<p class="ja" lang="ja">外部の辞書から取った、Plutchik の感情語の valence・arousal・dominance の評定値。辞書と引いた語を provenance として記録する。</p>
+<dl>
+<dt>rdfs:subClassOf</dt><dd><a href="http://www.w3.org/ns/prov#Entity">prov:Entity</a></dd>
+</dl>
+</article>
+</section>
+<section><h2 id="sec-object-properties">Object properties</h2>
+<article id="about">
+<h3>about <span class="ja" lang="ja">対象とする</span></h3>
+<p class="iri"><code>plu:about</code> · owl:ObjectProperty</p>
+<p>Relates an intensity reading to the Plutchik emotion it quantifies.</p>
+<p class="ja" lang="ja">強度の読み取り値と、それが測る Plutchik の感情を結ぶ。</p>
+<dl>
+<dt>rdfs:domain</dt><dd><a href="#IntensityReading">plu:IntensityReading</a></dd>
+<dt>rdfs:range</dt><dd><a href="#PlutchikEmotion">plu:PlutchikEmotion</a></dd>
+</dl>
+</article>
+<article id="aggregationRule">
+<h3>aggregation rule <span class="ja" lang="ja">集約規則</span></h3>
+<p class="iri"><code>plu:aggregationRule</code> · owl:ObjectProperty</p>
+<p>Relates an intensity reading to the derivation rule under which it is aggregated.</p>
+<p class="ja" lang="ja">強度の読み取り値と、それを集約した導出規則を結ぶ。</p>
+<dl>
+<dt>rdfs:domain</dt><dd><a href="#IntensityReading">plu:IntensityReading</a></dd>
+<dt>rdfs:range</dt><dd><a href="#DerivationRule">plu:DerivationRule</a></dd>
+</dl>
+</article>
+<article id="derivedByRule">
+<h3>derived by rule <span class="ja" lang="ja">規則により導かれた</span></h3>
+<p class="iri"><code>plu:derivedByRule</code> · owl:ObjectProperty</p>
+<p>Relates a derived occurrence to the derivation rule that produced it.</p>
+<p class="ja" lang="ja">導かれた事例と、それを生んだ導出規則を結ぶ。</p>
+<dl>
+<dt>rdfs:range</dt><dd><a href="#DerivationRule">plu:DerivationRule</a></dd>
+</dl>
+</article>
+<article id="derivedFrom">
+<h3>derived from <span class="ja" lang="ja">から導かれた</span></h3>
+<p class="iri"><code>plu:derivedFrom</code> · owl:ObjectProperty</p>
+<p>Relates a derived occurrence to the evidence it was inferred from; specialises prov:wasDerivedFrom.</p>
+<p class="ja" lang="ja">導かれた事例と、推論の根拠となった証拠を結ぶ。prov:wasDerivedFrom の特殊化。</p>
+<dl>
+<dt>rdfs:subPropertyOf</dt><dd><a href="http://www.w3.org/ns/prov#wasDerivedFrom">prov:wasDerivedFrom</a></dd>
+</dl>
+</article>
+<article id="hasComponentEmotion">
+<h3>has component emotion <span class="ja" lang="ja">成分感情を持つ</span></h3>
+<p class="iri"><code>plu:hasComponentEmotion</code> · owl:ObjectProperty</p>
+<p>Relates a compound emotion to a basic emotion that composes it.</p>
+<p class="ja" lang="ja">複合感情と、それを構成する基本感情を結ぶ。</p>
+<dl>
+<dt>rdfs:domain</dt><dd><a href="#CompoundEmotion">plu:CompoundEmotion</a></dd>
+<dt>rdfs:range</dt><dd><a href="#BasicEmotion">plu:BasicEmotion</a></dd>
+</dl>
+</article>
+<article id="hasIntensityLevel">
+<h3>has intensity level <span class="ja" lang="ja">強度段階を持つ</span></h3>
+<p class="iri"><code>plu:hasIntensityLevel</code> · owl:FunctionalProperty, owl:ObjectProperty</p>
+<p>Relates a basic emotion or an intensity variant to its intensity level on the wheel.</p>
+<p class="ja" lang="ja">基本感情または強度の変種と、wheel 上の強度段階を結ぶ。</p>
+<dl>
+<dt>rdfs:domain</dt><dd><a href="#PlutchikEmotion">plu:PlutchikEmotion</a></dd>
+<dt>rdfs:range</dt><dd><a href="#IntensityLevel">plu:IntensityLevel</a></dd>
+</dl>
+</article>
+<article id="hasIntensityReading">
+<h3>has intensity reading <span class="ja" lang="ja">強度の読み取り値を持つ</span></h3>
+<p class="iri"><code>plu:hasIntensityReading</code> · owl:ObjectProperty</p>
+<p>Relates an emotion situation to one of its intensity readings.</p>
+<p class="ja" lang="ja">感情の状況と、その強度の読み取り値の 1 つを結ぶ。</p>
+<dl>
+<dt>rdfs:range</dt><dd><a href="#IntensityReading">plu:IntensityReading</a></dd>
+</dl>
+</article>
+<article id="hasOpposite">
+<h3>has opposite <span class="ja" lang="ja">対極を持つ</span></h3>
+<p class="iri"><code>plu:hasOpposite</code> · owl:IrreflexiveProperty, owl:ObjectProperty, owl:SymmetricProperty</p>
+<p>Relates a basic emotion to its bipolar opposite on Plutchik&#x27;s wheel; a symmetric relation.</p>
+<p class="ja" lang="ja">基本感情と、wheel 上でその対極にある基本感情を結ぶ対称な関係。</p>
+<dl>
+<dt>rdfs:domain</dt><dd><a href="#BasicEmotion">plu:BasicEmotion</a></dd>
+<dt>rdfs:range</dt><dd><a href="#BasicEmotion">plu:BasicEmotion</a></dd>
+</dl>
+</article>
+<article id="hasVADReading">
+<h3>has VAD reading <span class="ja" lang="ja">VAD の読み取り値を持つ</span></h3>
+<p class="iri"><code>plu:hasVADReading</code> · owl:ObjectProperty</p>
+<p>Relates a Plutchik emotion to a valence-arousal-dominance reading of its name taken from an external lexicon.</p>
+<p class="ja" lang="ja">Plutchik の感情と、外部の辞書から取ったその名前の VAD 評定値を結ぶ。</p>
+<dl>
+<dt>rdfs:domain</dt><dd><a href="#PlutchikEmotion">plu:PlutchikEmotion</a></dd>
+<dt>rdfs:range</dt><dd><a href="#VADReading">plu:VADReading</a></dd>
+</dl>
+</article>
+<article id="intensityOf">
+<h3>intensity of <span class="ja" lang="ja">の強度の変種</span></h3>
+<p class="iri"><code>plu:intensityOf</code> · owl:FunctionalProperty, owl:ObjectProperty</p>
+<p>Relates an intensity variant to the basic emotion whose petal it belongs to.</p>
+<p class="ja" lang="ja">強度の変種と、それが属する花弁の基本感情を結ぶ。</p>
+<dl>
+<dt>rdfs:domain</dt><dd><a href="#IntensityVariant">plu:IntensityVariant</a></dd>
+<dt>rdfs:range</dt><dd><a href="#BasicEmotion">plu:BasicEmotion</a></dd>
+</dl>
+</article>
+<article id="isAdjacentTo">
+<h3>is adjacent to <span class="ja" lang="ja">隣り合う</span></h3>
+<p class="iri"><code>plu:isAdjacentTo</code> · owl:IrreflexiveProperty, owl:ObjectProperty, owl:SymmetricProperty</p>
+<p>Relates two basic emotions that are neighbours on Plutchik&#x27;s wheel; a symmetric relation (8 pairs).</p>
+<p class="ja" lang="ja">wheel 上で隣り合う 2 つの基本感情を結ぶ対称な関係（8 組）。</p>
+<dl>
+<dt>rdfs:domain</dt><dd><a href="#BasicEmotion">plu:BasicEmotion</a></dd>
+<dt>rdfs:range</dt><dd><a href="#BasicEmotion">plu:BasicEmotion</a></dd>
+</dl>
+</article>
+<article id="isManifestationOf">
+<h3>is manifestation of <span class="ja" lang="ja">の現れである</span></h3>
+<p class="iri"><code>plu:isManifestationOf</code> · owl:ObjectProperty</p>
+<p>Relates an emotion situation to the emotion it manifests; specialises be:isManifestationOf.</p>
+<p class="ja" lang="ja">感情の状況と、それが現す感情を結ぶ。be:isManifestationOf の特殊化。</p>
+<dl>
+<dt>rdfs:domain</dt><dd><a href="http://www.ontologydesignpatterns.org/ont/emotions/EmoCore.owl#EmotionSituation">emo:EmotionSituation</a></dd>
+<dt>rdfs:range</dt><dd><a href="http://www.ontologydesignpatterns.org/ont/emotions/EmoCore.owl#Emotion">emo:Emotion</a></dd>
+<dt>rdfs:subPropertyOf</dt><dd><a href="http://www.ontologydesignpatterns.org/ont/emotions/BasicEmotions.owl#isManifestationOf">be:isManifestationOf</a></dd>
+</dl>
+</article>
+<article id="sourceModel">
+<h3>source model <span class="ja" lang="ja">出所のモデル</span></h3>
+<p class="iri"><code>plu:sourceModel</code> · owl:ObjectProperty</p>
+<p>Relates an emotion situation to the model that attributed it; specialises prov:wasAttributedTo.</p>
+<p class="ja" lang="ja">感情の状況と、それを判定したモデルを結ぶ。prov:wasAttributedTo の特殊化。</p>
+<dl>
+<dt>rdfs:domain</dt><dd><a href="http://www.ontologydesignpatterns.org/ont/emotions/EmoCore.owl#EmotionSituation">emo:EmotionSituation</a></dd>
+<dt>rdfs:subPropertyOf</dt><dd><a href="http://www.w3.org/ns/prov#wasAttributedTo">prov:wasAttributedTo</a></dd>
+</dl>
+</article>
+</section>
+<section><h2 id="sec-datatype-properties">Datatype properties</h2>
+<article id="aggregationFunction">
+<h3>aggregation function <span class="ja" lang="ja">集約関数</span></h3>
+<p class="iri"><code>plu:aggregationFunction</code> · owl:DatatypeProperty</p>
+<p>The name of the function a derivation rule uses to combine component intensities (min, geometric_mean, arithmetic_mean or product). infer_dyads.rq instantiates dyads only for min rules (CombineEFOMoE #15).</p>
+<p class="ja" lang="ja">導出規則が成分の強度を組み合わせる関数の名前（min / geometric_mean / arithmetic_mean / product）。infer_dyads.rq は min の規則だけで dyad の事例を作る（CombineEFOMoE #15）。</p>
+<dl>
+<dt>rdfs:range</dt><dd><a href="http://www.w3.org/2001/XMLSchema#string">xsd:string</a></dd>
+</dl>
+</article>
+<article id="intensityRank">
+<h3>intensity rank <span class="ja" lang="ja">強度の順位</span></h3>
+<p class="iri"><code>plu:intensityRank</code> · owl:DatatypeProperty, owl:FunctionalProperty</p>
+<p>The order of an intensity level (1 = low, 2 = medium, 3 = high).</p>
+<p class="ja" lang="ja">強度段階の順位（1 = 弱、2 = 中、3 = 強）。</p>
+<dl>
+<dt>rdfs:domain</dt><dd><a href="#IntensityLevel">plu:IntensityLevel</a></dd>
+<dt>rdfs:range</dt><dd><a href="http://www.w3.org/2001/XMLSchema#integer">xsd:integer</a></dd>
+</dl>
+</article>
+<article id="lexiconTerm">
+<h3>lexicon term <span class="ja" lang="ja">辞書の見出し語</span></h3>
+<p class="iri"><code>plu:lexiconTerm</code> · owl:DatatypeProperty</p>
+<p>The word looked up in the source lexicon to obtain a VAD reading.</p>
+<p class="ja" lang="ja">VAD の読み取り値を得るために辞書で引いた語。</p>
+<dl>
+<dt>rdfs:domain</dt><dd><a href="#VADReading">plu:VADReading</a></dd>
+<dt>rdfs:range</dt><dd><a href="http://www.w3.org/2001/XMLSchema#string">xsd:string</a></dd>
+</dl>
+</article>
+<article id="sourceText">
+<h3>source text <span class="ja" lang="ja">元のテキスト</span></h3>
+<p class="iri"><code>plu:sourceText</code> · owl:DatatypeProperty</p>
+<p>The source text from which an emotion situation was extracted.</p>
+<p class="ja" lang="ja">感情の状況を取り出した元のテキスト。</p>
+<dl>
+<dt>rdfs:range</dt><dd><a href="http://www.w3.org/2001/XMLSchema#string">xsd:string</a></dd>
+</dl>
+</article>
+<article id="thresholdParameter">
+<h3>threshold parameter <span class="ja" lang="ja">閾値パラメータ</span></h3>
+<p class="iri"><code>plu:thresholdParameter</code> · owl:DatatypeProperty</p>
+<p>The activation threshold parameter of a derivation rule.</p>
+<p class="ja" lang="ja">導出規則の活性化の閾値。</p>
+<dl>
+<dt>rdfs:range</dt><dd><a href="http://www.w3.org/2001/XMLSchema#float">xsd:float</a></dd>
+</dl>
+</article>
+<article id="vadArousal">
+<h3>arousal <span class="ja" lang="ja">覚醒度</span></h3>
+<p class="iri"><code>plu:vadArousal</code> · owl:DatatypeProperty</p>
+<p>The arousal (active-passive) score of a VAD reading, on the scale of its source lexicon.</p>
+<p class="ja" lang="ja">VAD の読み取り値の覚醒度（活発-沈静）。元の辞書の尺度による。</p>
+<dl>
+<dt>rdfs:domain</dt><dd><a href="#VADReading">plu:VADReading</a></dd>
+<dt>rdfs:range</dt><dd><a href="http://www.w3.org/2001/XMLSchema#decimal">xsd:decimal</a></dd>
+</dl>
+</article>
+<article id="vadDominance">
+<h3>dominance <span class="ja" lang="ja">支配性</span></h3>
+<p class="iri"><code>plu:vadDominance</code> · owl:DatatypeProperty</p>
+<p>The dominance (in control-controlled) score of a VAD reading, on the scale of its source lexicon. Not to be confused with the tertiary dyad plu:Dominance.</p>
+<p class="ja" lang="ja">VAD の読み取り値の支配性（制御している-されている）。元の辞書の尺度による。三次 dyad の plu:Dominance とは別物。</p>
+<dl>
+<dt>rdfs:domain</dt><dd><a href="#VADReading">plu:VADReading</a></dd>
+<dt>rdfs:range</dt><dd><a href="http://www.w3.org/2001/XMLSchema#decimal">xsd:decimal</a></dd>
+</dl>
+</article>
+<article id="vadValence">
+<h3>valence <span class="ja" lang="ja">感情価</span></h3>
+<p class="iri"><code>plu:vadValence</code> · owl:DatatypeProperty</p>
+<p>The valence (pleasure-displeasure) score of a VAD reading, on the scale of its source lexicon.</p>
+<p class="ja" lang="ja">VAD の読み取り値の感情価（快-不快）。元の辞書の尺度による。</p>
+<dl>
+<dt>rdfs:domain</dt><dd><a href="#VADReading">plu:VADReading</a></dd>
+<dt>rdfs:range</dt><dd><a href="http://www.w3.org/2001/XMLSchema#decimal">xsd:decimal</a></dd>
+</dl>
+</article>
+<article id="value">
+<h3>value <span class="ja" lang="ja">値</span></h3>
+<p class="iri"><code>plu:value</code> · owl:DatatypeProperty</p>
+<p>The numeric intensity value of an intensity reading.</p>
+<p class="ja" lang="ja">強度の読み取り値の数値。</p>
+<dl>
+<dt>rdfs:range</dt><dd><a href="http://www.w3.org/2001/XMLSchema#float">xsd:float</a></dd>
+</dl>
+</article>
+<article id="wheelPosition">
+<h3>wheel position <span class="ja" lang="ja">wheel 上の位置</span></h3>
+<p class="iri"><code>plu:wheelPosition</code> · owl:DatatypeProperty, owl:FunctionalProperty</p>
+<p>The clockwise position (0-7) of a basic emotion on Plutchik&#x27;s wheel, starting from joy; the circular distance between two positions (1, 2, 3 or 4) determines whether they form a primary, secondary or tertiary dyad or are opposites.</p>
+<p class="ja" lang="ja">Plutchik の wheel 上の基本感情の時計回りの位置（喜びを 0 とする 0〜7）。2 つの位置の円周上の距離（1・2・3・4）で、一次・二次・三次 dyad か対極かが決まる。</p>
+<dl>
+<dt>rdfs:domain</dt><dd><a href="#BasicEmotion">plu:BasicEmotion</a></dd>
+<dt>rdfs:range</dt><dd><a href="http://www.w3.org/2001/XMLSchema#integer">xsd:integer</a></dd>
+</dl>
+</article>
+</section>
+<section><h2 id="sec-basic-emotions">Basic emotions</h2>
+<article id="Anger">
+<h3>Anger <span class="ja" lang="ja">怒り</span></h3>
+<p class="iri"><code>plu:Anger</code> · plu:BasicEmotion</p>
+<p>The basic emotion of anger; opposite of fear.</p>
+<p class="ja" lang="ja">基本感情の怒り。対極は恐れ。</p>
+<dl>
+<dt>plu:hasIntensityLevel</dt><dd><a href="#MediumIntensity">plu:MediumIntensity</a></dd>
+<dt>plu:isAdjacentTo</dt><dd><a href="#Anticipation">plu:Anticipation</a></dd>
+<dt>plu:wheelPosition</dt><dd>6</dd>
+<dt>skos:closeMatch</dt><dd><a href="http://www.ontologydesignpatterns.org/ont/emotions/BasicEmotions.owl#Anger">be:Anger</a></dd>
+</dl>
+</article>
+<article id="Anticipation">
+<h3>Anticipation <span class="ja" lang="ja">期待</span></h3>
+<p class="iri"><code>plu:Anticipation</code> · plu:BasicEmotion</p>
+<p>The basic emotion of anticipation; opposite of surprise. Plutchik-specific (no Ekman/EFO equivalent).</p>
+<p class="ja" lang="ja">基本感情の期待。対極は驚き。Plutchik 固有（Ekman / EFO に対応なし）。</p>
+<dl>
+<dt>plu:hasIntensityLevel</dt><dd><a href="#MediumIntensity">plu:MediumIntensity</a></dd>
+<dt>plu:isAdjacentTo</dt><dd><a href="#Joy">plu:Joy</a></dd>
+<dt>plu:wheelPosition</dt><dd>7</dd>
+</dl>
+</article>
+<article id="Disgust">
+<h3>Disgust <span class="ja" lang="ja">嫌悪</span></h3>
+<p class="iri"><code>plu:Disgust</code> · plu:BasicEmotion</p>
+<p>The basic emotion of disgust; opposite of trust.</p>
+<p class="ja" lang="ja">基本感情の嫌悪。対極は信頼。</p>
+<dl>
+<dt>plu:hasIntensityLevel</dt><dd><a href="#MediumIntensity">plu:MediumIntensity</a></dd>
+<dt>plu:isAdjacentTo</dt><dd><a href="#Anger">plu:Anger</a></dd>
+<dt>plu:wheelPosition</dt><dd>5</dd>
+<dt>skos:closeMatch</dt><dd><a href="http://www.ontologydesignpatterns.org/ont/emotions/BasicEmotions.owl#Disgust">be:Disgust</a></dd>
+</dl>
+</article>
+<article id="Fear">
+<h3>Fear <span class="ja" lang="ja">恐れ</span></h3>
+<p class="iri"><code>plu:Fear</code> · plu:BasicEmotion</p>
+<p>The basic emotion of fear; opposite of anger.</p>
+<p class="ja" lang="ja">基本感情の恐れ。対極は怒り。</p>
+<dl>
+<dt>plu:hasIntensityLevel</dt><dd><a href="#MediumIntensity">plu:MediumIntensity</a></dd>
+<dt>plu:hasOpposite</dt><dd><a href="#Anger">plu:Anger</a></dd>
+<dt>plu:isAdjacentTo</dt><dd><a href="#Surprise">plu:Surprise</a></dd>
+<dt>plu:wheelPosition</dt><dd>2</dd>
+<dt>skos:closeMatch</dt><dd><a href="http://www.ontologydesignpatterns.org/ont/emotions/BasicEmotions.owl#Fear">be:Fear</a></dd>
+</dl>
+</article>
+<article id="Joy">
+<h3>Joy <span class="ja" lang="ja">喜び</span></h3>
+<p class="iri"><code>plu:Joy</code> · plu:BasicEmotion</p>
+<p>The basic emotion of joy; opposite of sadness.</p>
+<p class="ja" lang="ja">基本感情の喜び。対極は悲しみ。</p>
+<dl>
+<dt>plu:hasIntensityLevel</dt><dd><a href="#MediumIntensity">plu:MediumIntensity</a></dd>
+<dt>plu:hasOpposite</dt><dd><a href="#Sadness">plu:Sadness</a></dd>
+<dt>plu:isAdjacentTo</dt><dd><a href="#Trust">plu:Trust</a></dd>
+<dt>plu:wheelPosition</dt><dd>0</dd>
+<dt>skos:closeMatch</dt><dd><a href="http://www.ontologydesignpatterns.org/ont/emotions/BasicEmotions.owl#Enjoyment">be:Enjoyment</a></dd>
+</dl>
+</article>
+<article id="Sadness">
+<h3>Sadness <span class="ja" lang="ja">悲しみ</span></h3>
+<p class="iri"><code>plu:Sadness</code> · plu:BasicEmotion</p>
+<p>The basic emotion of sadness; opposite of joy.</p>
+<p class="ja" lang="ja">基本感情の悲しみ。対極は喜び。</p>
+<dl>
+<dt>plu:hasIntensityLevel</dt><dd><a href="#MediumIntensity">plu:MediumIntensity</a></dd>
+<dt>plu:isAdjacentTo</dt><dd><a href="#Disgust">plu:Disgust</a></dd>
+<dt>plu:wheelPosition</dt><dd>4</dd>
+<dt>skos:closeMatch</dt><dd><a href="http://www.ontologydesignpatterns.org/ont/emotions/BasicEmotions.owl#Sadness">be:Sadness</a></dd>
+</dl>
+</article>
+<article id="Surprise">
+<h3>Surprise <span class="ja" lang="ja">驚き</span></h3>
+<p class="iri"><code>plu:Surprise</code> · plu:BasicEmotion</p>
+<p>The basic emotion of surprise; opposite of anticipation.</p>
+<p class="ja" lang="ja">基本感情の驚き。対極は期待。</p>
+<dl>
+<dt>plu:hasIntensityLevel</dt><dd><a href="#MediumIntensity">plu:MediumIntensity</a></dd>
+<dt>plu:hasOpposite</dt><dd><a href="#Anticipation">plu:Anticipation</a></dd>
+<dt>plu:isAdjacentTo</dt><dd><a href="#Sadness">plu:Sadness</a></dd>
+<dt>plu:wheelPosition</dt><dd>3</dd>
+<dt>skos:closeMatch</dt><dd><a href="http://www.ontologydesignpatterns.org/ont/emotions/BasicEmotions.owl#Surprise">be:Surprise</a></dd>
+</dl>
+</article>
+<article id="Trust">
+<h3>Trust <span class="ja" lang="ja">信頼</span></h3>
+<p class="iri"><code>plu:Trust</code> · plu:BasicEmotion</p>
+<p>The basic emotion of trust; opposite of disgust. Plutchik-specific (no Ekman/EFO equivalent).</p>
+<p class="ja" lang="ja">基本感情の信頼。対極は嫌悪。Plutchik 固有（Ekman / EFO に対応なし）。</p>
+<dl>
+<dt>plu:hasIntensityLevel</dt><dd><a href="#MediumIntensity">plu:MediumIntensity</a></dd>
+<dt>plu:hasOpposite</dt><dd><a href="#Disgust">plu:Disgust</a></dd>
+<dt>plu:isAdjacentTo</dt><dd><a href="#Fear">plu:Fear</a></dd>
+<dt>plu:wheelPosition</dt><dd>1</dd>
+</dl>
+</article>
+</section>
+<section><h2 id="sec-intensity-variants">Intensity variants</h2>
+<article id="Acceptance">
+<h3>Acceptance <span class="ja" lang="ja">受容</span></h3>
+<p class="iri"><code>plu:Acceptance</code> · plu:IntensityVariant</p>
+<p>The low-intensity form of trust (outer ring of Plutchik&#x27;s wheel).</p>
+<p class="ja" lang="ja">信頼の弱い形（Plutchik の wheel の外側の環）。</p>
+<dl>
+<dt>plu:hasIntensityLevel</dt><dd><a href="#LowIntensity">plu:LowIntensity</a></dd>
+<dt>plu:intensityOf</dt><dd><a href="#Trust">plu:Trust</a></dd>
+</dl>
+</article>
+<article id="Admiration">
+<h3>Admiration <span class="ja" lang="ja">敬愛</span></h3>
+<p class="iri"><code>plu:Admiration</code> · plu:IntensityVariant</p>
+<p>The high-intensity form of trust (inner ring of Plutchik&#x27;s wheel).</p>
+<p class="ja" lang="ja">信頼の強い形（Plutchik の wheel の内側の環）。</p>
+<dl>
+<dt>plu:hasIntensityLevel</dt><dd><a href="#HighIntensity">plu:HighIntensity</a></dd>
+<dt>plu:intensityOf</dt><dd><a href="#Trust">plu:Trust</a></dd>
+</dl>
+</article>
+<article id="Amazement">
+<h3>Amazement <span class="ja" lang="ja">驚嘆</span></h3>
+<p class="iri"><code>plu:Amazement</code> · plu:IntensityVariant</p>
+<p>The high-intensity form of surprise (inner ring of Plutchik&#x27;s wheel).</p>
+<p class="ja" lang="ja">驚きの強い形（Plutchik の wheel の内側の環）。</p>
+<dl>
+<dt>plu:hasIntensityLevel</dt><dd><a href="#HighIntensity">plu:HighIntensity</a></dd>
+<dt>plu:intensityOf</dt><dd><a href="#Surprise">plu:Surprise</a></dd>
+</dl>
+</article>
+<article id="Annoyance">
+<h3>Annoyance <span class="ja" lang="ja">苛立ち</span></h3>
+<p class="iri"><code>plu:Annoyance</code> · plu:IntensityVariant</p>
+<p>The low-intensity form of anger (outer ring of Plutchik&#x27;s wheel).</p>
+<p class="ja" lang="ja">怒りの弱い形（Plutchik の wheel の外側の環）。</p>
+<dl>
+<dt>plu:hasIntensityLevel</dt><dd><a href="#LowIntensity">plu:LowIntensity</a></dd>
+<dt>plu:intensityOf</dt><dd><a href="#Anger">plu:Anger</a></dd>
+</dl>
+</article>
+<article id="Apprehension">
+<h3>Apprehension <span class="ja" lang="ja">不安</span></h3>
+<p class="iri"><code>plu:Apprehension</code> · plu:IntensityVariant</p>
+<p>The low-intensity form of fear (outer ring of Plutchik&#x27;s wheel).</p>
+<p class="ja" lang="ja">恐れの弱い形（Plutchik の wheel の外側の環）。</p>
+<dl>
+<dt>plu:hasIntensityLevel</dt><dd><a href="#LowIntensity">plu:LowIntensity</a></dd>
+<dt>plu:intensityOf</dt><dd><a href="#Fear">plu:Fear</a></dd>
+</dl>
+</article>
+<article id="Boredom">
+<h3>Boredom <span class="ja" lang="ja">退屈</span></h3>
+<p class="iri"><code>plu:Boredom</code> · plu:IntensityVariant</p>
+<p>The low-intensity form of disgust (outer ring of Plutchik&#x27;s wheel).</p>
+<p class="ja" lang="ja">嫌悪の弱い形（Plutchik の wheel の外側の環）。</p>
+<dl>
+<dt>plu:hasIntensityLevel</dt><dd><a href="#LowIntensity">plu:LowIntensity</a></dd>
+<dt>plu:intensityOf</dt><dd><a href="#Disgust">plu:Disgust</a></dd>
+</dl>
+</article>
+<article id="Distraction">
+<h3>Distraction <span class="ja" lang="ja">放心</span></h3>
+<p class="iri"><code>plu:Distraction</code> · plu:IntensityVariant</p>
+<p>The low-intensity form of surprise (outer ring of Plutchik&#x27;s wheel).</p>
+<p class="ja" lang="ja">驚きの弱い形（Plutchik の wheel の外側の環）。</p>
+<dl>
+<dt>plu:hasIntensityLevel</dt><dd><a href="#LowIntensity">plu:LowIntensity</a></dd>
+<dt>plu:intensityOf</dt><dd><a href="#Surprise">plu:Surprise</a></dd>
+</dl>
+</article>
+<article id="Ecstasy">
+<h3>Ecstasy <span class="ja" lang="ja">恍惚</span></h3>
+<p class="iri"><code>plu:Ecstasy</code> · plu:IntensityVariant</p>
+<p>The high-intensity form of joy (inner ring of Plutchik&#x27;s wheel).</p>
+<p class="ja" lang="ja">喜びの強い形（Plutchik の wheel の内側の環）。</p>
+<dl>
+<dt>plu:hasIntensityLevel</dt><dd><a href="#HighIntensity">plu:HighIntensity</a></dd>
+<dt>plu:intensityOf</dt><dd><a href="#Joy">plu:Joy</a></dd>
+</dl>
+</article>
+<article id="Grief">
+<h3>Grief <span class="ja" lang="ja">悲嘆</span></h3>
+<p class="iri"><code>plu:Grief</code> · plu:IntensityVariant</p>
+<p>The high-intensity form of sadness (inner ring of Plutchik&#x27;s wheel).</p>
+<p class="ja" lang="ja">悲しみの強い形（Plutchik の wheel の内側の環）。</p>
+<dl>
+<dt>plu:hasIntensityLevel</dt><dd><a href="#HighIntensity">plu:HighIntensity</a></dd>
+<dt>plu:intensityOf</dt><dd><a href="#Sadness">plu:Sadness</a></dd>
+</dl>
+</article>
+<article id="Interest">
+<h3>Interest <span class="ja" lang="ja">関心</span></h3>
+<p class="iri"><code>plu:Interest</code> · plu:IntensityVariant</p>
+<p>The low-intensity form of anticipation (outer ring of Plutchik&#x27;s wheel).</p>
+<p class="ja" lang="ja">期待の弱い形（Plutchik の wheel の外側の環）。</p>
+<dl>
+<dt>plu:hasIntensityLevel</dt><dd><a href="#LowIntensity">plu:LowIntensity</a></dd>
+<dt>plu:intensityOf</dt><dd><a href="#Anticipation">plu:Anticipation</a></dd>
+</dl>
+</article>
+<article id="Loathing">
+<h3>Loathing <span class="ja" lang="ja">憎悪</span></h3>
+<p class="iri"><code>plu:Loathing</code> · plu:IntensityVariant</p>
+<p>The high-intensity form of disgust (inner ring of Plutchik&#x27;s wheel).</p>
+<p class="ja" lang="ja">嫌悪の強い形（Plutchik の wheel の内側の環）。</p>
+<dl>
+<dt>plu:hasIntensityLevel</dt><dd><a href="#HighIntensity">plu:HighIntensity</a></dd>
+<dt>plu:intensityOf</dt><dd><a href="#Disgust">plu:Disgust</a></dd>
+</dl>
+</article>
+<article id="Pensiveness">
+<h3>Pensiveness <span class="ja" lang="ja">哀愁</span></h3>
+<p class="iri"><code>plu:Pensiveness</code> · plu:IntensityVariant</p>
+<p>The low-intensity form of sadness (outer ring of Plutchik&#x27;s wheel).</p>
+<p class="ja" lang="ja">悲しみの弱い形（Plutchik の wheel の外側の環）。</p>
+<dl>
+<dt>plu:hasIntensityLevel</dt><dd><a href="#LowIntensity">plu:LowIntensity</a></dd>
+<dt>plu:intensityOf</dt><dd><a href="#Sadness">plu:Sadness</a></dd>
+</dl>
+</article>
+<article id="Rage">
+<h3>Rage <span class="ja" lang="ja">激怒</span></h3>
+<p class="iri"><code>plu:Rage</code> · plu:IntensityVariant</p>
+<p>The high-intensity form of anger (inner ring of Plutchik&#x27;s wheel).</p>
+<p class="ja" lang="ja">怒りの強い形（Plutchik の wheel の内側の環）。</p>
+<dl>
+<dt>plu:hasIntensityLevel</dt><dd><a href="#HighIntensity">plu:HighIntensity</a></dd>
+<dt>plu:intensityOf</dt><dd><a href="#Anger">plu:Anger</a></dd>
+</dl>
+</article>
+<article id="Serenity">
+<h3>Serenity <span class="ja" lang="ja">平穏</span></h3>
+<p class="iri"><code>plu:Serenity</code> · plu:IntensityVariant</p>
+<p>The low-intensity form of joy (outer ring of Plutchik&#x27;s wheel).</p>
+<p class="ja" lang="ja">喜びの弱い形（Plutchik の wheel の外側の環）。</p>
+<dl>
+<dt>plu:hasIntensityLevel</dt><dd><a href="#LowIntensity">plu:LowIntensity</a></dd>
+<dt>plu:intensityOf</dt><dd><a href="#Joy">plu:Joy</a></dd>
+</dl>
+</article>
+<article id="Terror">
+<h3>Terror <span class="ja" lang="ja">恐怖</span></h3>
+<p class="iri"><code>plu:Terror</code> · plu:IntensityVariant</p>
+<p>The high-intensity form of fear (inner ring of Plutchik&#x27;s wheel).</p>
+<p class="ja" lang="ja">恐れの強い形（Plutchik の wheel の内側の環）。</p>
+<dl>
+<dt>plu:hasIntensityLevel</dt><dd><a href="#HighIntensity">plu:HighIntensity</a></dd>
+<dt>plu:intensityOf</dt><dd><a href="#Fear">plu:Fear</a></dd>
+</dl>
+</article>
+<article id="Vigilance">
+<h3>Vigilance <span class="ja" lang="ja">警戒</span></h3>
+<p class="iri"><code>plu:Vigilance</code> · plu:IntensityVariant</p>
+<p>The high-intensity form of anticipation (inner ring of Plutchik&#x27;s wheel).</p>
+<p class="ja" lang="ja">期待の強い形（Plutchik の wheel の内側の環）。</p>
+<dl>
+<dt>plu:hasIntensityLevel</dt><dd><a href="#HighIntensity">plu:HighIntensity</a></dd>
+<dt>plu:intensityOf</dt><dd><a href="#Anticipation">plu:Anticipation</a></dd>
+</dl>
+</article>
+</section>
+<section><h2 id="sec-primary-dyads">Primary dyads</h2>
+<article id="Aggressiveness">
+<h3>Aggressiveness <span class="ja" lang="ja">攻撃性</span></h3>
+<p class="iri"><code>plu:Aggressiveness</code> · plu:PrimaryDyad</p>
+<p>The primary dyad of anger and anticipation (adjacent on the wheel).</p>
+<p class="ja" lang="ja">怒りと期待の一次 dyad（wheel 上で隣り合う基本感情の組）。</p>
+<dl>
+<dt>plu:hasComponentEmotion</dt><dd><a href="#Anger">plu:Anger</a>, <a href="#Anticipation">plu:Anticipation</a></dd>
+</dl>
+</article>
+<article id="Awe">
+<h3>Awe <span class="ja" lang="ja">畏怖</span></h3>
+<p class="iri"><code>plu:Awe</code> · plu:PrimaryDyad</p>
+<p>The primary dyad of fear and surprise (adjacent on the wheel).</p>
+<p class="ja" lang="ja">恐れと驚きの一次 dyad（wheel 上で隣り合う基本感情の組）。</p>
+<dl>
+<dt>plu:hasComponentEmotion</dt><dd><a href="#Fear">plu:Fear</a>, <a href="#Surprise">plu:Surprise</a></dd>
+</dl>
+</article>
+<article id="Contempt">
+<h3>Contempt <span class="ja" lang="ja">軽蔑</span></h3>
+<p class="iri"><code>plu:Contempt</code> · plu:PrimaryDyad</p>
+<p>The primary dyad of disgust and anger (adjacent on the wheel).</p>
+<p class="ja" lang="ja">嫌悪と怒りの一次 dyad（wheel 上で隣り合う基本感情の組）。</p>
+<dl>
+<dt>plu:hasComponentEmotion</dt><dd><a href="#Anger">plu:Anger</a>, <a href="#Disgust">plu:Disgust</a></dd>
+</dl>
+</article>
+<article id="Disapproval">
+<h3>Disapproval <span class="ja" lang="ja">不承認</span></h3>
+<p class="iri"><code>plu:Disapproval</code> · plu:PrimaryDyad</p>
+<p>The primary dyad of surprise and sadness (adjacent on the wheel).</p>
+<p class="ja" lang="ja">驚きと悲しみの一次 dyad（wheel 上で隣り合う基本感情の組）。</p>
+<dl>
+<dt>plu:hasComponentEmotion</dt><dd><a href="#Sadness">plu:Sadness</a>, <a href="#Surprise">plu:Surprise</a></dd>
+</dl>
+</article>
+<article id="Love">
+<h3>Love <span class="ja" lang="ja">愛</span></h3>
+<p class="iri"><code>plu:Love</code> · plu:PrimaryDyad</p>
+<p>The primary dyad of joy and trust (adjacent on the wheel).</p>
+<p class="ja" lang="ja">喜びと信頼の一次 dyad（wheel 上で隣り合う基本感情の組）。</p>
+<dl>
+<dt>plu:hasComponentEmotion</dt><dd><a href="#Joy">plu:Joy</a>, <a href="#Trust">plu:Trust</a></dd>
+</dl>
+</article>
+<article id="Optimism">
+<h3>Optimism <span class="ja" lang="ja">楽観</span></h3>
+<p class="iri"><code>plu:Optimism</code> · plu:PrimaryDyad</p>
+<p>The primary dyad of anticipation and joy (adjacent on the wheel).</p>
+<p class="ja" lang="ja">期待と喜びの一次 dyad（wheel 上で隣り合う基本感情の組）。</p>
+<dl>
+<dt>plu:hasComponentEmotion</dt><dd><a href="#Anticipation">plu:Anticipation</a>, <a href="#Joy">plu:Joy</a></dd>
+</dl>
+</article>
+<article id="Remorse">
+<h3>Remorse <span class="ja" lang="ja">自責</span></h3>
+<p class="iri"><code>plu:Remorse</code> · plu:PrimaryDyad</p>
+<p>The primary dyad of sadness and disgust (adjacent on the wheel).</p>
+<p class="ja" lang="ja">悲しみと嫌悪の一次 dyad（wheel 上で隣り合う基本感情の組）。</p>
+<dl>
+<dt>plu:hasComponentEmotion</dt><dd><a href="#Disgust">plu:Disgust</a>, <a href="#Sadness">plu:Sadness</a></dd>
+</dl>
+</article>
+<article id="Submission">
+<h3>Submission <span class="ja" lang="ja">服従</span></h3>
+<p class="iri"><code>plu:Submission</code> · plu:PrimaryDyad</p>
+<p>The primary dyad of trust and fear (adjacent on the wheel).</p>
+<p class="ja" lang="ja">信頼と恐れの一次 dyad（wheel 上で隣り合う基本感情の組）。</p>
+<dl>
+<dt>plu:hasComponentEmotion</dt><dd><a href="#Fear">plu:Fear</a>, <a href="#Trust">plu:Trust</a></dd>
+</dl>
+</article>
+</section>
+<section><h2 id="sec-secondary-dyads">Secondary dyads</h2>
+<article id="Curiosity">
+<h3>Curiosity <span class="ja" lang="ja">好奇心</span></h3>
+<p class="iri"><code>plu:Curiosity</code> · plu:SecondaryDyad</p>
+<p>The secondary dyad of trust and surprise (one step apart on the wheel).</p>
+<p class="ja" lang="ja">信頼と驚きの二次 dyad（wheel 上で1 つおきの基本感情の組）。</p>
+<dl>
+<dt>plu:hasComponentEmotion</dt><dd><a href="#Surprise">plu:Surprise</a>, <a href="#Trust">plu:Trust</a></dd>
+</dl>
+</article>
+<article id="Cynicism">
+<h3>Cynicism <span class="ja" lang="ja">冷笑</span></h3>
+<p class="iri"><code>plu:Cynicism</code> · plu:SecondaryDyad</p>
+<p>The secondary dyad of disgust and anticipation (one step apart on the wheel).</p>
+<p class="ja" lang="ja">嫌悪と期待の二次 dyad（wheel 上で1 つおきの基本感情の組）。</p>
+<dl>
+<dt>plu:hasComponentEmotion</dt><dd><a href="#Anticipation">plu:Anticipation</a>, <a href="#Disgust">plu:Disgust</a></dd>
+</dl>
+</article>
+<article id="Despair">
+<h3>Despair <span class="ja" lang="ja">絶望</span></h3>
+<p class="iri"><code>plu:Despair</code> · plu:SecondaryDyad</p>
+<p>The secondary dyad of fear and sadness (one step apart on the wheel).</p>
+<p class="ja" lang="ja">恐れと悲しみの二次 dyad（wheel 上で1 つおきの基本感情の組）。</p>
+<dl>
+<dt>plu:hasComponentEmotion</dt><dd><a href="#Fear">plu:Fear</a>, <a href="#Sadness">plu:Sadness</a></dd>
+</dl>
+</article>
+<article id="Envy">
+<h3>Envy <span class="ja" lang="ja">羨望</span></h3>
+<p class="iri"><code>plu:Envy</code> · plu:SecondaryDyad</p>
+<p>The secondary dyad of sadness and anger (one step apart on the wheel).</p>
+<p class="ja" lang="ja">悲しみと怒りの二次 dyad（wheel 上で1 つおきの基本感情の組）。</p>
+<dl>
+<dt>plu:hasComponentEmotion</dt><dd><a href="#Anger">plu:Anger</a>, <a href="#Sadness">plu:Sadness</a></dd>
+</dl>
+</article>
+<article id="Guilt">
+<h3>Guilt <span class="ja" lang="ja">罪悪感</span></h3>
+<p class="iri"><code>plu:Guilt</code> · plu:SecondaryDyad</p>
+<p>The secondary dyad of joy and fear (one step apart on the wheel).</p>
+<p class="ja" lang="ja">喜びと恐れの二次 dyad（wheel 上で1 つおきの基本感情の組）。</p>
+<dl>
+<dt>plu:hasComponentEmotion</dt><dd><a href="#Fear">plu:Fear</a>, <a href="#Joy">plu:Joy</a></dd>
+</dl>
+</article>
+<article id="Hope">
+<h3>Hope <span class="ja" lang="ja">希望</span></h3>
+<p class="iri"><code>plu:Hope</code> · plu:SecondaryDyad</p>
+<p>The secondary dyad of anticipation and trust (one step apart on the wheel).</p>
+<p class="ja" lang="ja">期待と信頼の二次 dyad（wheel 上で1 つおきの基本感情の組）。</p>
+<dl>
+<dt>plu:hasComponentEmotion</dt><dd><a href="#Anticipation">plu:Anticipation</a>, <a href="#Trust">plu:Trust</a></dd>
+<dt>skos:altLabel</dt><dd>Fatalism</dd>
+</dl>
+</article>
+<article id="Pride">
+<h3>Pride <span class="ja" lang="ja">誇り</span></h3>
+<p class="iri"><code>plu:Pride</code> · plu:SecondaryDyad</p>
+<p>The secondary dyad of anger and joy (one step apart on the wheel).</p>
+<p class="ja" lang="ja">怒りと喜びの二次 dyad（wheel 上で1 つおきの基本感情の組）。</p>
+<dl>
+<dt>plu:hasComponentEmotion</dt><dd><a href="#Anger">plu:Anger</a>, <a href="#Joy">plu:Joy</a></dd>
+</dl>
+</article>
+<article id="Unbelief">
+<h3>Unbelief <span class="ja" lang="ja">不信</span></h3>
+<p class="iri"><code>plu:Unbelief</code> · plu:SecondaryDyad</p>
+<p>The secondary dyad of surprise and disgust (one step apart on the wheel).</p>
+<p class="ja" lang="ja">驚きと嫌悪の二次 dyad（wheel 上で1 つおきの基本感情の組）。</p>
+<dl>
+<dt>plu:hasComponentEmotion</dt><dd><a href="#Disgust">plu:Disgust</a>, <a href="#Surprise">plu:Surprise</a></dd>
+<dt>skos:altLabel</dt><dd>Shock</dd>
+</dl>
+</article>
+</section>
+<section><h2 id="sec-tertiary-dyads">Tertiary dyads</h2>
+<article id="Anxiety">
+<h3>Anxiety <span class="ja" lang="ja">懸念</span></h3>
+<p class="iri"><code>plu:Anxiety</code> · plu:TertiaryDyad</p>
+<p>The tertiary dyad of anticipation and fear (two steps apart on the wheel).</p>
+<p class="ja" lang="ja">期待と恐れの三次 dyad（wheel 上で2 つおきの基本感情の組）。</p>
+<dl>
+<dt>plu:hasComponentEmotion</dt><dd><a href="#Anticipation">plu:Anticipation</a>, <a href="#Fear">plu:Fear</a></dd>
+</dl>
+</article>
+<article id="Delight">
+<h3>Delight <span class="ja" lang="ja">歓喜</span></h3>
+<p class="iri"><code>plu:Delight</code> · plu:TertiaryDyad</p>
+<p>The tertiary dyad of joy and surprise (two steps apart on the wheel).</p>
+<p class="ja" lang="ja">喜びと驚きの三次 dyad（wheel 上で2 つおきの基本感情の組）。</p>
+<dl>
+<dt>plu:hasComponentEmotion</dt><dd><a href="#Joy">plu:Joy</a>, <a href="#Surprise">plu:Surprise</a></dd>
+</dl>
+</article>
+<article id="Dominance">
+<h3>Dominance <span class="ja" lang="ja">支配</span></h3>
+<p class="iri"><code>plu:Dominance</code> · plu:TertiaryDyad</p>
+<p>The tertiary dyad of anger and trust (two steps apart on the wheel).</p>
+<p class="ja" lang="ja">怒りと信頼の三次 dyad（wheel 上で2 つおきの基本感情の組）。</p>
+<dl>
+<dt>plu:hasComponentEmotion</dt><dd><a href="#Anger">plu:Anger</a>, <a href="#Trust">plu:Trust</a></dd>
+</dl>
+</article>
+<article id="Morbidness">
+<h3>Morbidness <span class="ja" lang="ja">病的好奇</span></h3>
+<p class="iri"><code>plu:Morbidness</code> · plu:TertiaryDyad</p>
+<p>The tertiary dyad of disgust and joy (two steps apart on the wheel).</p>
+<p class="ja" lang="ja">嫌悪と喜びの三次 dyad（wheel 上で2 つおきの基本感情の組）。</p>
+<dl>
+<dt>plu:hasComponentEmotion</dt><dd><a href="#Disgust">plu:Disgust</a>, <a href="#Joy">plu:Joy</a></dd>
+</dl>
+</article>
+<article id="Outrage">
+<h3>Outrage <span class="ja" lang="ja">憤慨</span></h3>
+<p class="iri"><code>plu:Outrage</code> · plu:TertiaryDyad</p>
+<p>The tertiary dyad of surprise and anger (two steps apart on the wheel).</p>
+<p class="ja" lang="ja">驚きと怒りの三次 dyad（wheel 上で2 つおきの基本感情の組）。</p>
+<dl>
+<dt>plu:hasComponentEmotion</dt><dd><a href="#Anger">plu:Anger</a>, <a href="#Surprise">plu:Surprise</a></dd>
+</dl>
+</article>
+<article id="Pessimism">
+<h3>Pessimism <span class="ja" lang="ja">悲観</span></h3>
+<p class="iri"><code>plu:Pessimism</code> · plu:TertiaryDyad</p>
+<p>The tertiary dyad of sadness and anticipation (two steps apart on the wheel).</p>
+<p class="ja" lang="ja">悲しみと期待の三次 dyad（wheel 上で2 つおきの基本感情の組）。</p>
+<dl>
+<dt>plu:hasComponentEmotion</dt><dd><a href="#Anticipation">plu:Anticipation</a>, <a href="#Sadness">plu:Sadness</a></dd>
+</dl>
+</article>
+<article id="Sentimentality">
+<h3>Sentimentality <span class="ja" lang="ja">感傷</span></h3>
+<p class="iri"><code>plu:Sentimentality</code> · plu:TertiaryDyad</p>
+<p>The tertiary dyad of trust and sadness (two steps apart on the wheel).</p>
+<p class="ja" lang="ja">信頼と悲しみの三次 dyad（wheel 上で2 つおきの基本感情の組）。</p>
+<dl>
+<dt>plu:hasComponentEmotion</dt><dd><a href="#Sadness">plu:Sadness</a>, <a href="#Trust">plu:Trust</a></dd>
+</dl>
+</article>
+<article id="Shame">
+<h3>Shame <span class="ja" lang="ja">恥</span></h3>
+<p class="iri"><code>plu:Shame</code> · plu:TertiaryDyad</p>
+<p>The tertiary dyad of fear and disgust (two steps apart on the wheel).</p>
+<p class="ja" lang="ja">恐れと嫌悪の三次 dyad（wheel 上で2 つおきの基本感情の組）。</p>
+<dl>
+<dt>plu:hasComponentEmotion</dt><dd><a href="#Disgust">plu:Disgust</a>, <a href="#Fear">plu:Fear</a></dd>
+</dl>
+</article>
+</section>
+<section><h2 id="sec-intensity-levels">Intensity levels</h2>
+<article id="HighIntensity">
+<h3>High intensity <span class="ja" lang="ja">強</span></h3>
+<p class="iri"><code>plu:HighIntensity</code> · plu:IntensityLevel</p>
+<p>The high intensity level (inner ring of Plutchik&#x27;s wheel).</p>
+<p class="ja" lang="ja">強い強度段階（wheel の内側の環）。</p>
+<dl>
+<dt>plu:intensityRank</dt><dd>3</dd>
+</dl>
+</article>
+<article id="LowIntensity">
+<h3>Low intensity <span class="ja" lang="ja">弱</span></h3>
+<p class="iri"><code>plu:LowIntensity</code> · plu:IntensityLevel</p>
+<p>The low intensity level (outer ring of Plutchik&#x27;s wheel).</p>
+<p class="ja" lang="ja">弱い強度段階（wheel の外側の環）。</p>
+<dl>
+<dt>plu:intensityRank</dt><dd>1</dd>
+</dl>
+</article>
+<article id="MediumIntensity">
+<h3>Medium intensity <span class="ja" lang="ja">中</span></h3>
+<p class="iri"><code>plu:MediumIntensity</code> · plu:IntensityLevel</p>
+<p>The medium intensity level of the basic emotions (middle ring of Plutchik&#x27;s wheel).</p>
+<p class="ja" lang="ja">基本感情の中程度の強度段階（wheel の中間の環）。</p>
+<dl>
+<dt>plu:intensityRank</dt><dd>2</dd>
+</dl>
+</article>
+</section>
+<section><h2 id="sec-derivation-rules">Derivation rules</h2>
+<article id="Rule_DyadArithMean">
+<h3>Dyad Arithmetic-Mean Aggregation (TH=0.5) <span class="ja" lang="ja">dyad の算術平均集約（TH=0.5）</span></h3>
+<p class="iri"><code>plu:Rule_DyadArithMean</code> · plu:DerivationRule</p>
+<p>(P(a)+P(b))/2 &gt;= TH. Fully compensatory (not a t-norm).</p>
+<p class="ja" lang="ja">(P(a)+P(b))/2 &gt;= TH。完全に補償的（t-norm ではない）。</p>
+<dl>
+<dt>plu:aggregationFunction</dt><dd>arithmetic_mean</dd>
+<dt>plu:thresholdParameter</dt><dd>0.5</dd>
+</dl>
+</article>
+<article id="Rule_DyadGeoMean">
+<h3>Dyad Geometric-Mean Aggregation (TH=0.5) <span class="ja" lang="ja">dyad の幾何平均集約（TH=0.5）</span></h3>
+<p class="iri"><code>plu:Rule_DyadGeoMean</code> · plu:DerivationRule</p>
+<p>sqrt(P(a)*P(b)) &gt;= TH. Compensatory; monotone-equivalent to the product t-norm.</p>
+<p class="ja" lang="ja">sqrt(P(a)*P(b)) &gt;= TH。補償的で、積 t-norm と単調に同値。</p>
+<dl>
+<dt>plu:aggregationFunction</dt><dd>geometric_mean</dd>
+<dt>plu:thresholdParameter</dt><dd>0.5</dd>
+</dl>
+</article>
+<article id="Rule_DyadMin">
+<h3>Dyad Minimum Aggregation (TH=0.5) <span class="ja" lang="ja">dyad の最小値集約（TH=0.5）</span></h3>
+<p class="iri"><code>plu:Rule_DyadMin</code> · plu:DerivationRule</p>
+<p>Derivation rule that instantiates a dyad when both component emotions have intensity at or above 0.5, taking the minimum as the dyad intensity.</p>
+<p class="ja" lang="ja">成分の 2 感情の強度がともに 0.5 以上のとき dyad の事例を作り、最小値を dyad の強度とする導出規則。</p>
+<dl>
+<dt>plu:aggregationFunction</dt><dd>min</dd>
+<dt>plu:thresholdParameter</dt><dd>0.5</dd>
+</dl>
+</article>
+<article id="Rule_DyadMin_CalibratedTH">
+<h3>Dyad Minimum Aggregation (validation-calibrated per-dyad TH) <span class="ja" lang="ja">dyad の最小値集約（dyad ごとに validation で較正した TH）</span></h3>
+<p class="iri"><code>plu:Rule_DyadMin_CalibratedTH</code> · plu:DerivationRule</p>
+<p>min(P(a),P(b)) &gt;= TH_c where TH_c maximises F1 on the validation split for each dyad c. The concrete TH_c used by a derivation is recorded on the occurrence in the provenance KG.</p>
+<p class="ja" lang="ja">min(P(a),P(b)) &gt;= TH_c。TH_c は dyad c ごとに validation の F1 を最大にする値で、実際に使った値は provenance KG の事例に記録する。</p>
+<dl>
+<dt>plu:aggregationFunction</dt><dd>min</dd>
+</dl>
+</article>
+<article id="Rule_DyadMin_TH03">
+<h3>Dyad Minimum Aggregation (TH=0.3) <span class="ja" lang="ja">dyad の最小値集約（TH=0.3）</span></h3>
+<p class="iri"><code>plu:Rule_DyadMin_TH03</code> · plu:DerivationRule</p>
+<p>Variant of the dyad-minimum rule with activation threshold 0.3.</p>
+<p class="ja" lang="ja">閾値を 0.3 にした最小値集約の規則。</p>
+<dl>
+<dt>plu:aggregationFunction</dt><dd>min</dd>
+<dt>plu:thresholdParameter</dt><dd>0.3</dd>
+</dl>
+</article>
+<article id="Rule_DyadMin_TH07">
+<h3>Dyad Minimum Aggregation (TH=0.7) <span class="ja" lang="ja">dyad の最小値集約（TH=0.7）</span></h3>
+<p class="iri"><code>plu:Rule_DyadMin_TH07</code> · plu:DerivationRule</p>
+<p>Variant of the dyad-minimum rule with activation threshold 0.7.</p>
+<p class="ja" lang="ja">閾値を 0.7 にした最小値集約の規則。</p>
+<dl>
+<dt>plu:aggregationFunction</dt><dd>min</dd>
+<dt>plu:thresholdParameter</dt><dd>0.7</dd>
+</dl>
+</article>
+<article id="Rule_DyadProduct">
+<h3>Dyad Product Aggregation (TH=0.5) <span class="ja" lang="ja">dyad の積集約（TH=0.5）</span></h3>
+<p class="iri"><code>plu:Rule_DyadProduct</code> · plu:DerivationRule</p>
+<p>P(a)*P(b) &gt;= TH. Product t-norm.</p>
+<p class="ja" lang="ja">P(a)*P(b) &gt;= TH。積 t-norm。</p>
+<dl>
+<dt>plu:aggregationFunction</dt><dd>product</dd>
+<dt>plu:thresholdParameter</dt><dd>0.5</dd>
+</dl>
+</article>
+</section>
+</body>
+</html>

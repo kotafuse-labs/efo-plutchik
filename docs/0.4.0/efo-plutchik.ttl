@@ -1,0 +1,160 @@
+@prefix plu:       <https://w3id.org/efo-plutchik#> .
+@prefix emo:       <http://www.ontologydesignpatterns.org/ont/emotions/EmoCore.owl#> .
+@prefix be:        <http://www.ontologydesignpatterns.org/ont/emotions/BasicEmotions.owl#> .
+@prefix framester: <https://w3id.org/framester/schema/> .
+@prefix prov:      <http://www.w3.org/ns/prov#> .
+@prefix owl:       <http://www.w3.org/2002/07/owl#> .
+@prefix rdf:       <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:      <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix skos:      <http://www.w3.org/2004/02/skos/core#> .
+@prefix xsd:       <http://www.w3.org/2001/XMLSchema#> .
+@prefix dcterms:   <http://purl.org/dc/terms/> .
+@prefix vann:      <http://purl.org/vocab/vann/> .
+
+# EFO-Plutchik Module — 設計仕様書 v0.4.0 セクション5 (Concept Definitions) に忠実。
+# 概念定義 (TBox + 感情個体 + 推論規則個体)。provenance 個体は推論時に生成 (Phase 3)。
+# 各 term は rdfs:label (表示名) と skos:definition (定義文) を持つ。完全性は
+# doc_shapes.ttl (SHACL) + validate.py:validate_documentation で機械検証する。
+
+plu: a owl:Ontology ;
+    dcterms:title "EFO-Plutchik Module"@en ;
+    rdfs:label "EFO-Plutchik Module"@en ;
+    rdfs:comment "EFO-compatible Plutchik dyad module (8 basic emotions + 8 primary dyads)."@en ;
+    dcterms:description "An EFO (Emotion Frames Ontology) compatible module formalizing Plutchik's wheel of emotions: 8 basic emotions, their 4 opposition pairs, and 8 primary dyads, with derivation rules for inferring compound emotions from intensity readings."@en ;
+    owl:versionInfo "0.4.0" ;
+    owl:versionIRI <https://w3id.org/efo-plutchik/0.4.0> ;
+    dcterms:creator "FuseKota" ;
+    dcterms:license <https://creativecommons.org/licenses/by/4.0/> ;
+    dcterms:created "2026-06-22"^^xsd:date ;
+    vann:preferredNamespacePrefix "plu" ;
+    vann:preferredNamespaceUri "https://w3id.org/efo-plutchik#" ;
+    rdfs:seeAlso <http://www.ontologydesignpatterns.org/ont/emotions/EmoCore.owl> ;
+    rdfs:seeAlso <http://www.ontologydesignpatterns.org/ont/emotions/BasicEmotions.owl> ;
+    # EFO (EmoCore + BasicEmotions) との整合は vocabulary-level alignment:
+    # 共有 IRI (emo: / be:) + skos:closeMatch による語彙整合であり、owl:imports は
+    # 宣言上の参照。実際の検証は同梱ローカルコピー (ontology/efo-src/) に対して行う (③参照)。
+    owl:imports <http://www.ontologydesignpatterns.org/ont/emotions/EmoCore.owl> .
+
+#################### 5.2 Classes ####################
+plu:PlutchikEmotion a owl:Class ; rdfs:subClassOf emo:Emotion ; rdfs:label "Plutchik Emotion"@en ;
+    skos:definition "Any emotion in Plutchik's model of affect; the common superclass of basic emotions and compound emotions."@en .
+plu:BasicEmotion a owl:Class ; rdfs:subClassOf plu:PlutchikEmotion ; rdfs:label "Basic Emotion"@en ;
+    skos:definition "One of the eight primary emotions of Plutchik's wheel (Joy, Trust, Fear, Surprise, Sadness, Disgust, Anger, Anticipation), arranged in four bipolar opposition pairs."@en .
+plu:CompoundEmotion a owl:Class ; rdfs:subClassOf plu:PlutchikEmotion ; rdfs:label "Compound Emotion"@en ;
+    skos:definition "An emotion that arises from the combination of two or more basic emotions."@en .
+plu:Dyad a owl:Class ; rdfs:subClassOf plu:CompoundEmotion ; rdfs:label "Dyad"@en ;
+    skos:definition "A compound emotion formed by combining exactly two basic emotions."@en .
+plu:PrimaryDyad a owl:Class ; rdfs:subClassOf plu:Dyad ; rdfs:label "Primary Dyad"@en ;
+    skos:definition "A dyad formed from two adjacent basic emotions on Plutchik's wheel; there are eight primary dyads."@en .
+emo:EmotionSituation a owl:Class ; rdfs:subClassOf framester:FrameOccurrence ; rdfs:label "Emotion Situation"@en ;
+    skos:definition "An occurrence in which an emotion is manifested, bearing intensity readings; locally declared to bridge Plutchik occurrences to Framester frame occurrences."@en .
+plu:DerivationRule a owl:Class ; rdfs:label "Derivation Rule"@en ;
+    skos:definition "A rule that derives compound-emotion occurrences from basic-emotion intensity readings, parameterised by an activation threshold."@en .
+plu:IntensityReading a owl:Class ; rdfs:label "Intensity Reading"@en ;
+    skos:definition "A quantified measurement of the intensity of a Plutchik emotion within an emotion situation."@en .
+
+# 互いに素公理 (論理一貫性): 基本感情と複合感情は同時に成立しない。
+# Dyad/PrimaryDyad ⊂ CompoundEmotion なので、基本感情が dyad に混入する定義ミスを
+# OWL-RL 閉包 + 一貫性チェック (validate.py:check_theory_consistency) が検出できる。
+plu:BasicEmotion owl:disjointWith plu:CompoundEmotion .
+
+#################### 5.6 Properties ####################
+plu:hasComponentEmotion a owl:ObjectProperty ;
+    rdfs:domain plu:CompoundEmotion ; rdfs:range plu:BasicEmotion ; rdfs:label "has component emotion"@en ;
+    skos:definition "Relates a compound emotion to a basic emotion that composes it."@en .
+plu:hasOpposite a owl:ObjectProperty , owl:SymmetricProperty ;
+    rdfs:domain plu:BasicEmotion ; rdfs:range plu:BasicEmotion ; rdfs:label "has opposite"@en ;
+    skos:definition "Relates a basic emotion to its bipolar opposite on Plutchik's wheel; a symmetric relation."@en .
+plu:isManifestationOf a owl:ObjectProperty ;
+    rdfs:subPropertyOf be:isManifestationOf ; rdfs:domain emo:EmotionSituation ; rdfs:range emo:Emotion ;
+    rdfs:label "is manifestation of"@en ;
+    skos:definition "Relates an emotion situation to the emotion it manifests; specialises be:isManifestationOf."@en .
+plu:derivedFrom a owl:ObjectProperty ;
+    rdfs:subPropertyOf prov:wasDerivedFrom ; rdfs:label "derived from"@en ;
+    skos:definition "Relates a derived occurrence to the evidence it was inferred from; specialises prov:wasDerivedFrom."@en .
+plu:derivedByRule a owl:ObjectProperty ; rdfs:range plu:DerivationRule ; rdfs:label "derived by rule"@en ;
+    skos:definition "Relates a derived occurrence to the derivation rule that produced it."@en .
+plu:hasIntensityReading a owl:ObjectProperty ; rdfs:range plu:IntensityReading ; rdfs:label "has intensity reading"@en ;
+    skos:definition "Relates an emotion situation to one of its intensity readings."@en .
+plu:value a owl:DatatypeProperty ; rdfs:range xsd:float ; rdfs:label "value"@en ;
+    skos:definition "The numeric intensity value of an intensity reading."@en .
+plu:thresholdParameter a owl:DatatypeProperty ; rdfs:range xsd:float ; rdfs:label "threshold parameter"@en ;
+    skos:definition "The activation threshold parameter of a derivation rule."@en .
+plu:sourceText a owl:DatatypeProperty ; rdfs:range xsd:string ; rdfs:label "source text"@en ;
+    skos:definition "The source text from which an emotion situation was extracted."@en .
+
+# §6 (Instance-Level Inference) で provenance 個体に付与する補助プロパティ。
+# TBox は §5 中心だが、§6 の推論出力が参照するため宣言だけ先に置く (Phase 3)。
+plu:about a owl:ObjectProperty ;
+    rdfs:domain plu:IntensityReading ; rdfs:range plu:PlutchikEmotion ; rdfs:label "about"@en ;
+    skos:definition "Relates an intensity reading to the Plutchik emotion it quantifies."@en .
+plu:aggregationRule a owl:ObjectProperty ;
+    rdfs:domain plu:IntensityReading ; rdfs:range plu:DerivationRule ; rdfs:label "aggregation rule"@en ;
+    skos:definition "Relates an intensity reading to the derivation rule under which it is aggregated."@en .
+plu:aggregationFunction a owl:DatatypeProperty ;
+    rdfs:range xsd:string ; rdfs:label "aggregation function"@en ;
+    skos:definition "The name of the aggregation function used to combine intensity readings (e.g. minimum)."@en .
+plu:sourceModel a owl:ObjectProperty ;
+    rdfs:subPropertyOf prov:wasAttributedTo ; rdfs:domain emo:EmotionSituation ; rdfs:label "source model"@en ;
+    skos:definition "Relates an emotion situation to the model that attributed it; specialises prov:wasAttributedTo."@en .
+
+#################### 5.3 Eight Basic Emotions ####################
+plu:Joy a owl:NamedIndividual , plu:BasicEmotion ; rdfs:label "Joy"@en ; skos:closeMatch be:Enjoyment ;  # EFO の Ekman Joy 相当
+    skos:definition "The basic emotion of joy; opposite of sadness."@en .
+plu:Trust a owl:NamedIndividual , plu:BasicEmotion ; rdfs:label "Trust"@en ;
+    skos:definition "The basic emotion of trust; opposite of disgust. Plutchik-specific (no Ekman/EFO equivalent)."@en .
+plu:Fear a owl:NamedIndividual , plu:BasicEmotion ; rdfs:label "Fear"@en ; skos:closeMatch be:Fear ;
+    skos:definition "The basic emotion of fear; opposite of anger."@en .
+plu:Surprise a owl:NamedIndividual , plu:BasicEmotion ; rdfs:label "Surprise"@en ; skos:closeMatch be:Surprise ;
+    skos:definition "The basic emotion of surprise; opposite of anticipation."@en .
+plu:Sadness a owl:NamedIndividual , plu:BasicEmotion ; rdfs:label "Sadness"@en ; skos:closeMatch be:Sadness ;
+    skos:definition "The basic emotion of sadness; opposite of joy."@en .
+plu:Disgust a owl:NamedIndividual , plu:BasicEmotion ; rdfs:label "Disgust"@en ; skos:closeMatch be:Disgust ;
+    skos:definition "The basic emotion of disgust; opposite of trust."@en .
+plu:Anger a owl:NamedIndividual , plu:BasicEmotion ; rdfs:label "Anger"@en ; skos:closeMatch be:Anger ;
+    skos:definition "The basic emotion of anger; opposite of fear."@en .
+plu:Anticipation a owl:NamedIndividual , plu:BasicEmotion ; rdfs:label "Anticipation"@en ;
+    skos:definition "The basic emotion of anticipation; opposite of surprise. Plutchik-specific (no Ekman/EFO equivalent)."@en .
+
+#################### 5.4 Opposites (4 pairs) ####################
+plu:Joy      plu:hasOpposite plu:Sadness .
+plu:Trust    plu:hasOpposite plu:Disgust .
+plu:Fear     plu:hasOpposite plu:Anger .
+plu:Surprise plu:hasOpposite plu:Anticipation .
+
+#################### 5.5 Eight Primary Dyads ####################
+plu:Love a owl:NamedIndividual , plu:PrimaryDyad ; rdfs:label "Love"@en ;
+    skos:definition "The primary dyad of joy and trust."@en ;
+    plu:hasComponentEmotion plu:Joy , plu:Trust .
+plu:Submission a owl:NamedIndividual , plu:PrimaryDyad ; rdfs:label "Submission"@en ;
+    skos:definition "The primary dyad of trust and fear."@en ;
+    plu:hasComponentEmotion plu:Trust , plu:Fear .
+plu:Awe a owl:NamedIndividual , plu:PrimaryDyad ; rdfs:label "Awe"@en ;
+    skos:definition "The primary dyad of fear and surprise."@en ;
+    plu:hasComponentEmotion plu:Fear , plu:Surprise .
+plu:Disapproval a owl:NamedIndividual , plu:PrimaryDyad ; rdfs:label "Disapproval"@en ;
+    skos:definition "The primary dyad of surprise and sadness."@en ;
+    plu:hasComponentEmotion plu:Surprise , plu:Sadness .
+plu:Remorse a owl:NamedIndividual , plu:PrimaryDyad ; rdfs:label "Remorse"@en ;
+    skos:definition "The primary dyad of sadness and disgust."@en ;
+    plu:hasComponentEmotion plu:Sadness , plu:Disgust .
+plu:Contempt a owl:NamedIndividual , plu:PrimaryDyad ; rdfs:label "Contempt"@en ;
+    skos:definition "The primary dyad of disgust and anger."@en ;
+    plu:hasComponentEmotion plu:Disgust , plu:Anger .
+plu:Aggressiveness a owl:NamedIndividual , plu:PrimaryDyad ; rdfs:label "Aggressiveness"@en ;
+    skos:definition "The primary dyad of anger and anticipation."@en ;
+    plu:hasComponentEmotion plu:Anger , plu:Anticipation .
+plu:Optimism a owl:NamedIndividual , plu:PrimaryDyad ; rdfs:label "Optimism"@en ;
+    skos:definition "The primary dyad of anticipation and joy."@en ;
+    plu:hasComponentEmotion plu:Anticipation , plu:Joy .
+
+#################### Derivation Rules (決定7; Phase 3 で使用) ####################
+plu:Rule_DyadMin a owl:NamedIndividual , plu:DerivationRule ;
+    rdfs:label "Dyad Minimum Aggregation (TH=0.5)"@en ; plu:thresholdParameter "0.5"^^xsd:float ;
+    skos:definition "Derivation rule that instantiates a primary dyad when both component emotions have intensity at or above 0.5, taking the minimum as the dyad intensity."@en .
+plu:Rule_DyadMin_TH03 a owl:NamedIndividual , plu:DerivationRule ;
+    rdfs:label "Dyad Minimum Aggregation (TH=0.3)"@en ; plu:thresholdParameter "0.3"^^xsd:float ;
+    skos:definition "Variant of the dyad-minimum rule with activation threshold 0.3."@en .
+plu:Rule_DyadMin_TH07 a owl:NamedIndividual , plu:DerivationRule ;
+    rdfs:label "Dyad Minimum Aggregation (TH=0.7)"@en ; plu:thresholdParameter "0.7"^^xsd:float ;
+    skos:definition "Variant of the dyad-minimum rule with activation threshold 0.7."@en .

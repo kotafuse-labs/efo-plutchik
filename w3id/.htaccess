@@ -1,0 +1,15 @@
+# EFO-Plutchik ontology — https://github.com/kotafuse-labs/efo-plutchik
+Options +FollowSymLinks
+RewriteEngine on
+
+# Version IRIs, e.g. /efo-plutchik/0.5.0 -> the Turtle file of that release
+RewriteRule ^(\d+\.\d+\.\d+)/?$ https://kotafuse-labs.github.io/efo-plutchik/$1/efo-plutchik.ttl [R=303,L]
+
+# RDF clients -> current Turtle file
+RewriteCond %{HTTP_ACCEPT} text/turtle [OR]
+RewriteCond %{HTTP_ACCEPT} application/x-turtle [OR]
+RewriteCond %{HTTP_ACCEPT} text/n3
+RewriteRule ^$ https://kotafuse-labs.github.io/efo-plutchik/efo-plutchik.ttl [R=303,L]
+
+# Everything else -> human-readable documentation (term anchors match local names)
+RewriteRule ^$ https://kotafuse-labs.github.io/efo-plutchik/ [R=303,L]

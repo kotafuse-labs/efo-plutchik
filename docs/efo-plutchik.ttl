@@ -1,0 +1,501 @@
+@prefix plu:       <https://w3id.org/efo-plutchik#> .
+@prefix emo:       <http://www.ontologydesignpatterns.org/ont/emotions/EmoCore.owl#> .
+@prefix be:        <http://www.ontologydesignpatterns.org/ont/emotions/BasicEmotions.owl#> .
+@prefix framester: <https://w3id.org/framester/schema/> .
+@prefix prov:      <http://www.w3.org/ns/prov#> .
+@prefix owl:       <http://www.w3.org/2002/07/owl#> .
+@prefix rdf:       <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:      <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix skos:      <http://www.w3.org/2004/02/skos/core#> .
+@prefix xsd:       <http://www.w3.org/2001/XMLSchema#> .
+@prefix dcterms:   <http://purl.org/dc/terms/> .
+@prefix vann:      <http://purl.org/vocab/vann/> .
+
+# EFO-Plutchik Module v0.5.0（2026-11-14 再設計、CombineEFOMoE Issue #33）。
+# v0.4.0（8 基本感情 + primary dyad 8）に対し、強度の変種 16・secondary / tertiary dyad 16・
+# wheel 上の位置と隣接・VAD（valence / arousal / dominance）の語彙を加えた。感情は個体のまま（EmoCore / EFO と同じ流儀）。
+# VAD の数値は本ファイルに含めない（NRC VAD の利用条件が研究・非商用のため。ontology/build_vad.py で手元に別ファイルを生成）。
+# 各 term は rdfs:label と skos:definition を @en / @ja の両方で持つ。完全性は doc_shapes.ttl（SHACL）で機械検証する。
+# 感情個体の部分は表から生成した（生成器は CombineEFOMoE Issue #33 の作業記録を参照）。以後は本ファイルを直接編集する。
+
+plu: a owl:Ontology ;
+    dcterms:title "EFO-Plutchik Module"@en , "EFO-Plutchik モジュール"@ja ;
+    rdfs:label "EFO-Plutchik Module"@en , "EFO-Plutchik モジュール"@ja ;
+    rdfs:comment "EFO-compatible module for Plutchik's wheel of emotions: 8 basic emotions, 16 intensity variants, 24 dyads, wheel geometry and VAD vocabulary."@en ;
+    dcterms:description "An EFO (Emotion Frames Ontology) compatible module formalizing Plutchik's wheel of emotions: 8 basic emotions with their wheel positions, adjacencies and 4 opposition pairs, 16 intensity variants (low / high), 24 primary, secondary and tertiary dyads, a vocabulary for valence-arousal-dominance readings, and derivation rules for inferring compound emotions from intensity readings."@en ;
+    owl:versionInfo "0.5.0" ;
+    owl:versionIRI <https://w3id.org/efo-plutchik/0.5.0> ;
+    owl:priorVersion <https://w3id.org/efo-plutchik/0.4.0> ;
+    dcterms:creator "FuseKota" ;
+    dcterms:license <https://creativecommons.org/licenses/by/4.0/> ;
+    dcterms:created "2026-06-22"^^xsd:date ;
+    dcterms:modified "2026-11-14"^^xsd:date ;
+    dcterms:source "Plutchik, R. (2001). The Nature of Emotions. American Scientist 89(4), 344-350."@en ;
+    vann:preferredNamespacePrefix "plu" ;
+    vann:preferredNamespaceUri "https://w3id.org/efo-plutchik#" ;
+    rdfs:seeAlso <http://www.ontologydesignpatterns.org/ont/emotions/EmoCore.owl> ;
+    rdfs:seeAlso <http://www.ontologydesignpatterns.org/ont/emotions/BasicEmotions.owl> ;
+    # EFO (EmoCore + BasicEmotions) との整合は vocabulary-level alignment:
+    # 共有 IRI (emo: / be:) + skos:closeMatch による語彙整合であり、owl:imports は
+    # 宣言上の参照。実際の検証は同梱ローカルコピー (ontology/efo-src/) に対して行う。
+    owl:imports <http://www.ontologydesignpatterns.org/ont/emotions/EmoCore.owl> .
+
+#################### 5.2 Classes ####################
+plu:PlutchikEmotion a owl:Class ; rdfs:subClassOf emo:Emotion ;
+    rdfs:label "Plutchik Emotion"@en , "Plutchik の感情"@ja ;
+    skos:definition "Any emotion in Plutchik's model of affect; the common superclass of basic emotions, their intensity variants and compound emotions."@en ,
+        "Plutchik の感情モデルに含まれる感情。基本感情・その強度の変種・複合感情の共通の上位クラス。"@ja .
+plu:BasicEmotion a owl:Class ; rdfs:subClassOf plu:PlutchikEmotion ;
+    rdfs:label "Basic Emotion"@en , "基本感情"@ja ;
+    skos:definition "One of the eight primary emotions of Plutchik's wheel (Joy, Trust, Fear, Surprise, Sadness, Disgust, Anger, Anticipation), arranged in four bipolar opposition pairs; each is the medium-intensity form of its petal."@en ,
+        "Plutchik の wheel の 8 つの基本感情（喜び・信頼・恐れ・驚き・悲しみ・嫌悪・怒り・期待）。4 組の対極をなし、それぞれが花弁の中程度の強度にあたる。"@ja .
+plu:IntensityVariant a owl:Class ; rdfs:subClassOf plu:PlutchikEmotion ;
+    rdfs:label "Intensity Variant"@en , "強度の変種"@ja ;
+    skos:definition "A low- or high-intensity form of a basic emotion on Plutchik's wheel (e.g. serenity and ecstasy for joy)."@en ,
+        "Plutchik の wheel における基本感情の弱い形または強い形（例: 喜びに対する平穏と恍惚）。"@ja .
+plu:CompoundEmotion a owl:Class ; rdfs:subClassOf plu:PlutchikEmotion ;
+    rdfs:label "Compound Emotion"@en , "複合感情"@ja ;
+    skos:definition "An emotion that arises from the combination of two or more basic emotions."@en ,
+        "2 つ以上の基本感情の組み合わせから生じる感情。"@ja .
+plu:Dyad a owl:Class ; rdfs:subClassOf plu:CompoundEmotion ;
+    rdfs:label "Dyad"@en , "dyad（二項複合感情）"@ja ;
+    skos:definition "A compound emotion formed by combining exactly two basic emotions that are not opposites."@en ,
+        "対極でない 2 つの基本感情をちょうど組み合わせてできる複合感情。"@ja .
+plu:PrimaryDyad a owl:Class ; rdfs:subClassOf plu:Dyad ;
+    rdfs:label "Primary Dyad"@en , "一次 dyad"@ja ;
+    skos:definition "A dyad formed from two adjacent basic emotions on Plutchik's wheel; there are eight primary dyads."@en ,
+        "wheel 上で隣り合う 2 つの基本感情からなる dyad。8 個ある。"@ja .
+plu:SecondaryDyad a owl:Class ; rdfs:subClassOf plu:Dyad ;
+    rdfs:label "Secondary Dyad"@en , "二次 dyad"@ja ;
+    skos:definition "A dyad formed from two basic emotions one step apart on Plutchik's wheel; there are eight secondary dyads."@en ,
+        "wheel 上で 1 つおきの 2 つの基本感情からなる dyad。8 個ある。"@ja .
+plu:TertiaryDyad a owl:Class ; rdfs:subClassOf plu:Dyad ;
+    rdfs:label "Tertiary Dyad"@en , "三次 dyad"@ja ;
+    skos:definition "A dyad formed from two basic emotions two steps apart on Plutchik's wheel; there are eight tertiary dyads."@en ,
+        "wheel 上で 2 つおきの 2 つの基本感情からなる dyad。8 個ある。"@ja .
+plu:IntensityLevel a owl:Class ;
+    rdfs:label "Intensity Level"@en , "強度段階"@ja ;
+    skos:definition "One of the three ordered intensity levels of Plutchik's wheel (low, medium, high), corresponding to its outer, middle and inner rings."@en ,
+        "Plutchik の wheel の順序づいた 3 つの強度段階（弱・中・強）。外側・中間・内側の環に対応する。"@ja .
+emo:EmotionSituation a owl:Class ; rdfs:subClassOf framester:FrameOccurrence ;
+    rdfs:label "Emotion Situation"@en , "感情の状況"@ja ;
+    skos:definition "An occurrence in which an emotion is manifested, bearing intensity readings; locally declared to bridge Plutchik occurrences to Framester frame occurrences."@en ,
+        "感情が現れる出来事で、強度の読み取り値を持つ。Plutchik の事例を Framester の frame occurrence に橋渡しするためにローカルに宣言している。"@ja .
+plu:DerivationRule a owl:Class ;
+    rdfs:label "Derivation Rule"@en , "導出規則"@ja ;
+    skos:definition "A rule that derives compound-emotion occurrences from basic-emotion intensity readings, parameterised by an activation threshold."@en ,
+        "基本感情の強度の読み取り値から複合感情の事例を導く規則。活性化の閾値をパラメータに持つ。"@ja .
+plu:IntensityReading a owl:Class ;
+    rdfs:label "Intensity Reading"@en , "強度の読み取り値"@ja ;
+    skos:definition "A quantified measurement of the intensity of a Plutchik emotion within an emotion situation."@en ,
+        "感情の状況における Plutchik の感情の強度を数値で測ったもの。"@ja .
+plu:VADReading a owl:Class ;
+    rdfs:label "VAD Reading"@en , "VAD の読み取り値"@ja ;
+    skos:definition "A valence-arousal-dominance rating of a Plutchik emotion term taken from an external lexicon; the lexicon and the looked-up word are recorded as provenance."@en ,
+        "外部の辞書から取った、Plutchik の感情語の valence・arousal・dominance の評定値。辞書と引いた語を provenance として記録する。"@ja ;
+    rdfs:subClassOf prov:Entity .
+
+# 互いに素公理（論理一貫性）: 基本感情・強度の変種・複合感情は同時に成立しない。
+# OWL-RL 閉包 + 一貫性チェック（validate.py:check_theory_consistency）が混入を検出する。
+plu:BasicEmotion owl:disjointWith plu:CompoundEmotion .
+[] a owl:AllDisjointClasses ; owl:members ( plu:BasicEmotion plu:IntensityVariant plu:CompoundEmotion ) .
+[] a owl:AllDisjointClasses ; owl:members ( plu:PrimaryDyad plu:SecondaryDyad plu:TertiaryDyad ) .
+
+#################### 強度段階の個体（順序 1 < 2 < 3）####################
+plu:LowIntensity a owl:NamedIndividual , plu:IntensityLevel ;
+    rdfs:label "Low intensity"@en , "弱"@ja ; plu:intensityRank 1 ;
+    skos:definition "The low intensity level (outer ring of Plutchik's wheel)."@en , "弱い強度段階（wheel の外側の環）。"@ja .
+plu:MediumIntensity a owl:NamedIndividual , plu:IntensityLevel ;
+    rdfs:label "Medium intensity"@en , "中"@ja ; plu:intensityRank 2 ;
+    skos:definition "The medium intensity level of the basic emotions (middle ring of Plutchik's wheel)."@en , "基本感情の中程度の強度段階（wheel の中間の環）。"@ja .
+plu:HighIntensity a owl:NamedIndividual , plu:IntensityLevel ;
+    rdfs:label "High intensity"@en , "強"@ja ; plu:intensityRank 3 ;
+    skos:definition "The high intensity level (inner ring of Plutchik's wheel)."@en , "強い強度段階（wheel の内側の環）。"@ja .
+
+#################### 5.6 Properties ####################
+plu:hasComponentEmotion a owl:ObjectProperty ;
+    rdfs:domain plu:CompoundEmotion ; rdfs:range plu:BasicEmotion ;
+    rdfs:label "has component emotion"@en , "成分感情を持つ"@ja ;
+    skos:definition "Relates a compound emotion to a basic emotion that composes it."@en , "複合感情と、それを構成する基本感情を結ぶ。"@ja .
+plu:hasOpposite a owl:ObjectProperty , owl:SymmetricProperty , owl:IrreflexiveProperty ;
+    rdfs:domain plu:BasicEmotion ; rdfs:range plu:BasicEmotion ;
+    rdfs:label "has opposite"@en , "対極を持つ"@ja ;
+    skos:definition "Relates a basic emotion to its bipolar opposite on Plutchik's wheel; a symmetric relation."@en , "基本感情と、wheel 上でその対極にある基本感情を結ぶ対称な関係。"@ja .
+plu:isAdjacentTo a owl:ObjectProperty , owl:SymmetricProperty , owl:IrreflexiveProperty ;
+    rdfs:domain plu:BasicEmotion ; rdfs:range plu:BasicEmotion ;
+    rdfs:label "is adjacent to"@en , "隣り合う"@ja ;
+    skos:definition "Relates two basic emotions that are neighbours on Plutchik's wheel; a symmetric relation (8 pairs)."@en , "wheel 上で隣り合う 2 つの基本感情を結ぶ対称な関係（8 組）。"@ja .
+plu:intensityOf a owl:ObjectProperty , owl:FunctionalProperty ;
+    rdfs:domain plu:IntensityVariant ; rdfs:range plu:BasicEmotion ;
+    rdfs:label "intensity of"@en , "の強度の変種"@ja ;
+    skos:definition "Relates an intensity variant to the basic emotion whose petal it belongs to."@en , "強度の変種と、それが属する花弁の基本感情を結ぶ。"@ja .
+plu:hasIntensityLevel a owl:ObjectProperty , owl:FunctionalProperty ;
+    rdfs:domain plu:PlutchikEmotion ; rdfs:range plu:IntensityLevel ;
+    rdfs:label "has intensity level"@en , "強度段階を持つ"@ja ;
+    skos:definition "Relates a basic emotion or an intensity variant to its intensity level on the wheel."@en , "基本感情または強度の変種と、wheel 上の強度段階を結ぶ。"@ja .
+plu:isManifestationOf a owl:ObjectProperty ;
+    rdfs:subPropertyOf be:isManifestationOf ; rdfs:domain emo:EmotionSituation ; rdfs:range emo:Emotion ;
+    rdfs:label "is manifestation of"@en , "の現れである"@ja ;
+    skos:definition "Relates an emotion situation to the emotion it manifests; specialises be:isManifestationOf."@en , "感情の状況と、それが現す感情を結ぶ。be:isManifestationOf の特殊化。"@ja .
+plu:derivedFrom a owl:ObjectProperty ;
+    rdfs:subPropertyOf prov:wasDerivedFrom ;
+    rdfs:label "derived from"@en , "から導かれた"@ja ;
+    skos:definition "Relates a derived occurrence to the evidence it was inferred from; specialises prov:wasDerivedFrom."@en , "導かれた事例と、推論の根拠となった証拠を結ぶ。prov:wasDerivedFrom の特殊化。"@ja .
+plu:derivedByRule a owl:ObjectProperty ; rdfs:range plu:DerivationRule ;
+    rdfs:label "derived by rule"@en , "規則により導かれた"@ja ;
+    skos:definition "Relates a derived occurrence to the derivation rule that produced it."@en , "導かれた事例と、それを生んだ導出規則を結ぶ。"@ja .
+plu:hasIntensityReading a owl:ObjectProperty ; rdfs:range plu:IntensityReading ;
+    rdfs:label "has intensity reading"@en , "強度の読み取り値を持つ"@ja ;
+    skos:definition "Relates an emotion situation to one of its intensity readings."@en , "感情の状況と、その強度の読み取り値の 1 つを結ぶ。"@ja .
+plu:hasVADReading a owl:ObjectProperty ;
+    rdfs:domain plu:PlutchikEmotion ; rdfs:range plu:VADReading ;
+    rdfs:label "has VAD reading"@en , "VAD の読み取り値を持つ"@ja ;
+    skos:definition "Relates a Plutchik emotion to a valence-arousal-dominance reading of its name taken from an external lexicon."@en , "Plutchik の感情と、外部の辞書から取ったその名前の VAD 評定値を結ぶ。"@ja .
+plu:about a owl:ObjectProperty ;
+    rdfs:domain plu:IntensityReading ; rdfs:range plu:PlutchikEmotion ;
+    rdfs:label "about"@en , "対象とする"@ja ;
+    skos:definition "Relates an intensity reading to the Plutchik emotion it quantifies."@en , "強度の読み取り値と、それが測る Plutchik の感情を結ぶ。"@ja .
+plu:aggregationRule a owl:ObjectProperty ;
+    rdfs:domain plu:IntensityReading ; rdfs:range plu:DerivationRule ;
+    rdfs:label "aggregation rule"@en , "集約規則"@ja ;
+    skos:definition "Relates an intensity reading to the derivation rule under which it is aggregated."@en , "強度の読み取り値と、それを集約した導出規則を結ぶ。"@ja .
+plu:sourceModel a owl:ObjectProperty ;
+    rdfs:subPropertyOf prov:wasAttributedTo ; rdfs:domain emo:EmotionSituation ;
+    rdfs:label "source model"@en , "出所のモデル"@ja ;
+    skos:definition "Relates an emotion situation to the model that attributed it; specialises prov:wasAttributedTo."@en , "感情の状況と、それを判定したモデルを結ぶ。prov:wasAttributedTo の特殊化。"@ja .
+
+plu:value a owl:DatatypeProperty ; rdfs:range xsd:float ;
+    rdfs:label "value"@en , "値"@ja ;
+    skos:definition "The numeric intensity value of an intensity reading."@en , "強度の読み取り値の数値。"@ja .
+plu:thresholdParameter a owl:DatatypeProperty ; rdfs:range xsd:float ;
+    rdfs:label "threshold parameter"@en , "閾値パラメータ"@ja ;
+    skos:definition "The activation threshold parameter of a derivation rule."@en , "導出規則の活性化の閾値。"@ja .
+plu:sourceText a owl:DatatypeProperty ; rdfs:range xsd:string ;
+    rdfs:label "source text"@en , "元のテキスト"@ja ;
+    skos:definition "The source text from which an emotion situation was extracted."@en , "感情の状況を取り出した元のテキスト。"@ja .
+plu:aggregationFunction a owl:DatatypeProperty ; rdfs:range xsd:string ;
+    rdfs:label "aggregation function"@en , "集約関数"@ja ;
+    skos:definition "The name of the function a derivation rule uses to combine component intensities (min, geometric_mean, arithmetic_mean or product). infer_dyads.rq instantiates dyads only for min rules (CombineEFOMoE #15)."@en ,
+        "導出規則が成分の強度を組み合わせる関数の名前（min / geometric_mean / arithmetic_mean / product）。infer_dyads.rq は min の規則だけで dyad の事例を作る（CombineEFOMoE #15）。"@ja .
+plu:wheelPosition a owl:DatatypeProperty , owl:FunctionalProperty ;
+    rdfs:domain plu:BasicEmotion ; rdfs:range xsd:integer ;
+    rdfs:label "wheel position"@en , "wheel 上の位置"@ja ;
+    skos:definition "The clockwise position (0-7) of a basic emotion on Plutchik's wheel, starting from joy; the circular distance between two positions (1, 2, 3 or 4) determines whether they form a primary, secondary or tertiary dyad or are opposites."@en ,
+        "Plutchik の wheel 上の基本感情の時計回りの位置（喜びを 0 とする 0〜7）。2 つの位置の円周上の距離（1・2・3・4）で、一次・二次・三次 dyad か対極かが決まる。"@ja .
+plu:intensityRank a owl:DatatypeProperty , owl:FunctionalProperty ;
+    rdfs:domain plu:IntensityLevel ; rdfs:range xsd:integer ;
+    rdfs:label "intensity rank"@en , "強度の順位"@ja ;
+    skos:definition "The order of an intensity level (1 = low, 2 = medium, 3 = high)."@en , "強度段階の順位（1 = 弱、2 = 中、3 = 強）。"@ja .
+plu:vadValence a owl:DatatypeProperty ; rdfs:domain plu:VADReading ; rdfs:range xsd:decimal ;
+    rdfs:label "valence"@en , "感情価"@ja ;
+    skos:definition "The valence (pleasure-displeasure) score of a VAD reading, on the scale of its source lexicon."@en , "VAD の読み取り値の感情価（快-不快）。元の辞書の尺度による。"@ja .
+plu:vadArousal a owl:DatatypeProperty ; rdfs:domain plu:VADReading ; rdfs:range xsd:decimal ;
+    rdfs:label "arousal"@en , "覚醒度"@ja ;
+    skos:definition "The arousal (active-passive) score of a VAD reading, on the scale of its source lexicon."@en , "VAD の読み取り値の覚醒度（活発-沈静）。元の辞書の尺度による。"@ja .
+plu:vadDominance a owl:DatatypeProperty ; rdfs:domain plu:VADReading ; rdfs:range xsd:decimal ;
+    rdfs:label "dominance"@en , "支配性"@ja ;
+    skos:definition "The dominance (in control-controlled) score of a VAD reading, on the scale of its source lexicon. Not to be confused with the tertiary dyad plu:Dominance."@en ,
+        "VAD の読み取り値の支配性（制御している-されている）。元の辞書の尺度による。三次 dyad の plu:Dominance とは別物。"@ja .
+plu:lexiconTerm a owl:DatatypeProperty ; rdfs:domain plu:VADReading ; rdfs:range xsd:string ;
+    rdfs:label "lexicon term"@en , "辞書の見出し語"@ja ;
+    skos:definition "The word looked up in the source lexicon to obtain a VAD reading."@en , "VAD の読み取り値を得るために辞書で引いた語。"@ja .
+
+#################### 5.3 Eight Basic Emotions（wheel 上の位置 0–7、強度 medium）####################
+plu:Joy a owl:NamedIndividual , plu:BasicEmotion ;
+    rdfs:label "Joy"@en , "喜び"@ja ; skos:closeMatch be:Enjoyment ;
+    skos:definition "The basic emotion of joy; opposite of sadness."@en ,
+        "基本感情の喜び。対極は悲しみ。"@ja ;
+    plu:wheelPosition 0 ; plu:hasIntensityLevel plu:MediumIntensity .
+plu:Trust a owl:NamedIndividual , plu:BasicEmotion ;
+    rdfs:label "Trust"@en , "信頼"@ja ;
+    skos:definition "The basic emotion of trust; opposite of disgust. Plutchik-specific (no Ekman/EFO equivalent)."@en ,
+        "基本感情の信頼。対極は嫌悪。Plutchik 固有（Ekman / EFO に対応なし）。"@ja ;
+    plu:wheelPosition 1 ; plu:hasIntensityLevel plu:MediumIntensity .
+plu:Fear a owl:NamedIndividual , plu:BasicEmotion ;
+    rdfs:label "Fear"@en , "恐れ"@ja ; skos:closeMatch be:Fear ;
+    skos:definition "The basic emotion of fear; opposite of anger."@en ,
+        "基本感情の恐れ。対極は怒り。"@ja ;
+    plu:wheelPosition 2 ; plu:hasIntensityLevel plu:MediumIntensity .
+plu:Surprise a owl:NamedIndividual , plu:BasicEmotion ;
+    rdfs:label "Surprise"@en , "驚き"@ja ; skos:closeMatch be:Surprise ;
+    skos:definition "The basic emotion of surprise; opposite of anticipation."@en ,
+        "基本感情の驚き。対極は期待。"@ja ;
+    plu:wheelPosition 3 ; plu:hasIntensityLevel plu:MediumIntensity .
+plu:Sadness a owl:NamedIndividual , plu:BasicEmotion ;
+    rdfs:label "Sadness"@en , "悲しみ"@ja ; skos:closeMatch be:Sadness ;
+    skos:definition "The basic emotion of sadness; opposite of joy."@en ,
+        "基本感情の悲しみ。対極は喜び。"@ja ;
+    plu:wheelPosition 4 ; plu:hasIntensityLevel plu:MediumIntensity .
+plu:Disgust a owl:NamedIndividual , plu:BasicEmotion ;
+    rdfs:label "Disgust"@en , "嫌悪"@ja ; skos:closeMatch be:Disgust ;
+    skos:definition "The basic emotion of disgust; opposite of trust."@en ,
+        "基本感情の嫌悪。対極は信頼。"@ja ;
+    plu:wheelPosition 5 ; plu:hasIntensityLevel plu:MediumIntensity .
+plu:Anger a owl:NamedIndividual , plu:BasicEmotion ;
+    rdfs:label "Anger"@en , "怒り"@ja ; skos:closeMatch be:Anger ;
+    skos:definition "The basic emotion of anger; opposite of fear."@en ,
+        "基本感情の怒り。対極は恐れ。"@ja ;
+    plu:wheelPosition 6 ; plu:hasIntensityLevel plu:MediumIntensity .
+plu:Anticipation a owl:NamedIndividual , plu:BasicEmotion ;
+    rdfs:label "Anticipation"@en , "期待"@ja ;
+    skos:definition "The basic emotion of anticipation; opposite of surprise. Plutchik-specific (no Ekman/EFO equivalent)."@en ,
+        "基本感情の期待。対極は驚き。Plutchik 固有（Ekman / EFO に対応なし）。"@ja ;
+    plu:wheelPosition 7 ; plu:hasIntensityLevel plu:MediumIntensity .
+
+#################### 5.4 Opposites (4 pairs) と wheel 上の隣接 (8 pairs) ####################
+plu:Joy          plu:hasOpposite plu:Sadness .
+plu:Trust        plu:hasOpposite plu:Disgust .
+plu:Fear         plu:hasOpposite plu:Anger .
+plu:Surprise     plu:hasOpposite plu:Anticipation .
+plu:Joy          plu:isAdjacentTo plu:Trust .
+plu:Trust        plu:isAdjacentTo plu:Fear .
+plu:Fear         plu:isAdjacentTo plu:Surprise .
+plu:Surprise     plu:isAdjacentTo plu:Sadness .
+plu:Sadness      plu:isAdjacentTo plu:Disgust .
+plu:Disgust      plu:isAdjacentTo plu:Anger .
+plu:Anger        plu:isAdjacentTo plu:Anticipation .
+plu:Anticipation plu:isAdjacentTo plu:Joy .
+
+#################### 強度の変種 16（Plutchik の wheel の内側 = high、外側 = low）####################
+plu:Serenity a owl:NamedIndividual , plu:IntensityVariant ;
+    rdfs:label "Serenity"@en , "平穏"@ja ;
+    skos:definition "The low-intensity form of joy (outer ring of Plutchik's wheel)."@en ,
+        "喜びの弱い形（Plutchik の wheel の外側の環）。"@ja ;
+    plu:intensityOf plu:Joy ; plu:hasIntensityLevel plu:LowIntensity .
+plu:Ecstasy a owl:NamedIndividual , plu:IntensityVariant ;
+    rdfs:label "Ecstasy"@en , "恍惚"@ja ;
+    skos:definition "The high-intensity form of joy (inner ring of Plutchik's wheel)."@en ,
+        "喜びの強い形（Plutchik の wheel の内側の環）。"@ja ;
+    plu:intensityOf plu:Joy ; plu:hasIntensityLevel plu:HighIntensity .
+plu:Acceptance a owl:NamedIndividual , plu:IntensityVariant ;
+    rdfs:label "Acceptance"@en , "受容"@ja ;
+    skos:definition "The low-intensity form of trust (outer ring of Plutchik's wheel)."@en ,
+        "信頼の弱い形（Plutchik の wheel の外側の環）。"@ja ;
+    plu:intensityOf plu:Trust ; plu:hasIntensityLevel plu:LowIntensity .
+plu:Admiration a owl:NamedIndividual , plu:IntensityVariant ;
+    rdfs:label "Admiration"@en , "敬愛"@ja ;
+    skos:definition "The high-intensity form of trust (inner ring of Plutchik's wheel)."@en ,
+        "信頼の強い形（Plutchik の wheel の内側の環）。"@ja ;
+    plu:intensityOf plu:Trust ; plu:hasIntensityLevel plu:HighIntensity .
+plu:Apprehension a owl:NamedIndividual , plu:IntensityVariant ;
+    rdfs:label "Apprehension"@en , "不安"@ja ;
+    skos:definition "The low-intensity form of fear (outer ring of Plutchik's wheel)."@en ,
+        "恐れの弱い形（Plutchik の wheel の外側の環）。"@ja ;
+    plu:intensityOf plu:Fear ; plu:hasIntensityLevel plu:LowIntensity .
+plu:Terror a owl:NamedIndividual , plu:IntensityVariant ;
+    rdfs:label "Terror"@en , "恐怖"@ja ;
+    skos:definition "The high-intensity form of fear (inner ring of Plutchik's wheel)."@en ,
+        "恐れの強い形（Plutchik の wheel の内側の環）。"@ja ;
+    plu:intensityOf plu:Fear ; plu:hasIntensityLevel plu:HighIntensity .
+plu:Distraction a owl:NamedIndividual , plu:IntensityVariant ;
+    rdfs:label "Distraction"@en , "放心"@ja ;
+    skos:definition "The low-intensity form of surprise (outer ring of Plutchik's wheel)."@en ,
+        "驚きの弱い形（Plutchik の wheel の外側の環）。"@ja ;
+    plu:intensityOf plu:Surprise ; plu:hasIntensityLevel plu:LowIntensity .
+plu:Amazement a owl:NamedIndividual , plu:IntensityVariant ;
+    rdfs:label "Amazement"@en , "驚嘆"@ja ;
+    skos:definition "The high-intensity form of surprise (inner ring of Plutchik's wheel)."@en ,
+        "驚きの強い形（Plutchik の wheel の内側の環）。"@ja ;
+    plu:intensityOf plu:Surprise ; plu:hasIntensityLevel plu:HighIntensity .
+plu:Pensiveness a owl:NamedIndividual , plu:IntensityVariant ;
+    rdfs:label "Pensiveness"@en , "哀愁"@ja ;
+    skos:definition "The low-intensity form of sadness (outer ring of Plutchik's wheel)."@en ,
+        "悲しみの弱い形（Plutchik の wheel の外側の環）。"@ja ;
+    plu:intensityOf plu:Sadness ; plu:hasIntensityLevel plu:LowIntensity .
+plu:Grief a owl:NamedIndividual , plu:IntensityVariant ;
+    rdfs:label "Grief"@en , "悲嘆"@ja ;
+    skos:definition "The high-intensity form of sadness (inner ring of Plutchik's wheel)."@en ,
+        "悲しみの強い形（Plutchik の wheel の内側の環）。"@ja ;
+    plu:intensityOf plu:Sadness ; plu:hasIntensityLevel plu:HighIntensity .
+plu:Boredom a owl:NamedIndividual , plu:IntensityVariant ;
+    rdfs:label "Boredom"@en , "退屈"@ja ;
+    skos:definition "The low-intensity form of disgust (outer ring of Plutchik's wheel)."@en ,
+        "嫌悪の弱い形（Plutchik の wheel の外側の環）。"@ja ;
+    plu:intensityOf plu:Disgust ; plu:hasIntensityLevel plu:LowIntensity .
+plu:Loathing a owl:NamedIndividual , plu:IntensityVariant ;
+    rdfs:label "Loathing"@en , "憎悪"@ja ;
+    skos:definition "The high-intensity form of disgust (inner ring of Plutchik's wheel)."@en ,
+        "嫌悪の強い形（Plutchik の wheel の内側の環）。"@ja ;
+    plu:intensityOf plu:Disgust ; plu:hasIntensityLevel plu:HighIntensity .
+plu:Annoyance a owl:NamedIndividual , plu:IntensityVariant ;
+    rdfs:label "Annoyance"@en , "苛立ち"@ja ;
+    skos:definition "The low-intensity form of anger (outer ring of Plutchik's wheel)."@en ,
+        "怒りの弱い形（Plutchik の wheel の外側の環）。"@ja ;
+    plu:intensityOf plu:Anger ; plu:hasIntensityLevel plu:LowIntensity .
+plu:Rage a owl:NamedIndividual , plu:IntensityVariant ;
+    rdfs:label "Rage"@en , "激怒"@ja ;
+    skos:definition "The high-intensity form of anger (inner ring of Plutchik's wheel)."@en ,
+        "怒りの強い形（Plutchik の wheel の内側の環）。"@ja ;
+    plu:intensityOf plu:Anger ; plu:hasIntensityLevel plu:HighIntensity .
+plu:Interest a owl:NamedIndividual , plu:IntensityVariant ;
+    rdfs:label "Interest"@en , "関心"@ja ;
+    skos:definition "The low-intensity form of anticipation (outer ring of Plutchik's wheel)."@en ,
+        "期待の弱い形（Plutchik の wheel の外側の環）。"@ja ;
+    plu:intensityOf plu:Anticipation ; plu:hasIntensityLevel plu:LowIntensity .
+plu:Vigilance a owl:NamedIndividual , plu:IntensityVariant ;
+    rdfs:label "Vigilance"@en , "警戒"@ja ;
+    skos:definition "The high-intensity form of anticipation (inner ring of Plutchik's wheel)."@en ,
+        "期待の強い形（Plutchik の wheel の内側の環）。"@ja ;
+    plu:intensityOf plu:Anticipation ; plu:hasIntensityLevel plu:HighIntensity .
+
+#################### Primary dyads (8) ####################
+plu:Love a owl:NamedIndividual , plu:PrimaryDyad ;
+    rdfs:label "Love"@en , "愛"@ja ;
+    skos:definition "The primary dyad of joy and trust (adjacent on the wheel)."@en ,
+        "喜びと信頼の一次 dyad（wheel 上で隣り合う基本感情の組）。"@ja ;
+    plu:hasComponentEmotion plu:Joy , plu:Trust .
+plu:Submission a owl:NamedIndividual , plu:PrimaryDyad ;
+    rdfs:label "Submission"@en , "服従"@ja ;
+    skos:definition "The primary dyad of trust and fear (adjacent on the wheel)."@en ,
+        "信頼と恐れの一次 dyad（wheel 上で隣り合う基本感情の組）。"@ja ;
+    plu:hasComponentEmotion plu:Trust , plu:Fear .
+plu:Awe a owl:NamedIndividual , plu:PrimaryDyad ;
+    rdfs:label "Awe"@en , "畏怖"@ja ;
+    skos:definition "The primary dyad of fear and surprise (adjacent on the wheel)."@en ,
+        "恐れと驚きの一次 dyad（wheel 上で隣り合う基本感情の組）。"@ja ;
+    plu:hasComponentEmotion plu:Fear , plu:Surprise .
+plu:Disapproval a owl:NamedIndividual , plu:PrimaryDyad ;
+    rdfs:label "Disapproval"@en , "不承認"@ja ;
+    skos:definition "The primary dyad of surprise and sadness (adjacent on the wheel)."@en ,
+        "驚きと悲しみの一次 dyad（wheel 上で隣り合う基本感情の組）。"@ja ;
+    plu:hasComponentEmotion plu:Surprise , plu:Sadness .
+plu:Remorse a owl:NamedIndividual , plu:PrimaryDyad ;
+    rdfs:label "Remorse"@en , "自責"@ja ;
+    skos:definition "The primary dyad of sadness and disgust (adjacent on the wheel)."@en ,
+        "悲しみと嫌悪の一次 dyad（wheel 上で隣り合う基本感情の組）。"@ja ;
+    plu:hasComponentEmotion plu:Sadness , plu:Disgust .
+plu:Contempt a owl:NamedIndividual , plu:PrimaryDyad ;
+    rdfs:label "Contempt"@en , "軽蔑"@ja ;
+    skos:definition "The primary dyad of disgust and anger (adjacent on the wheel)."@en ,
+        "嫌悪と怒りの一次 dyad（wheel 上で隣り合う基本感情の組）。"@ja ;
+    plu:hasComponentEmotion plu:Disgust , plu:Anger .
+plu:Aggressiveness a owl:NamedIndividual , plu:PrimaryDyad ;
+    rdfs:label "Aggressiveness"@en , "攻撃性"@ja ;
+    skos:definition "The primary dyad of anger and anticipation (adjacent on the wheel)."@en ,
+        "怒りと期待の一次 dyad（wheel 上で隣り合う基本感情の組）。"@ja ;
+    plu:hasComponentEmotion plu:Anger , plu:Anticipation .
+plu:Optimism a owl:NamedIndividual , plu:PrimaryDyad ;
+    rdfs:label "Optimism"@en , "楽観"@ja ;
+    skos:definition "The primary dyad of anticipation and joy (adjacent on the wheel)."@en ,
+        "期待と喜びの一次 dyad（wheel 上で隣り合う基本感情の組）。"@ja ;
+    plu:hasComponentEmotion plu:Anticipation , plu:Joy .
+
+#################### Secondary dyads (8) ####################
+plu:Guilt a owl:NamedIndividual , plu:SecondaryDyad ;
+    rdfs:label "Guilt"@en , "罪悪感"@ja ;
+    skos:definition "The secondary dyad of joy and fear (one step apart on the wheel)."@en ,
+        "喜びと恐れの二次 dyad（wheel 上で1 つおきの基本感情の組）。"@ja ;
+    plu:hasComponentEmotion plu:Joy , plu:Fear .
+plu:Curiosity a owl:NamedIndividual , plu:SecondaryDyad ;
+    rdfs:label "Curiosity"@en , "好奇心"@ja ;
+    skos:definition "The secondary dyad of trust and surprise (one step apart on the wheel)."@en ,
+        "信頼と驚きの二次 dyad（wheel 上で1 つおきの基本感情の組）。"@ja ;
+    plu:hasComponentEmotion plu:Trust , plu:Surprise .
+plu:Despair a owl:NamedIndividual , plu:SecondaryDyad ;
+    rdfs:label "Despair"@en , "絶望"@ja ;
+    skos:definition "The secondary dyad of fear and sadness (one step apart on the wheel)."@en ,
+        "恐れと悲しみの二次 dyad（wheel 上で1 つおきの基本感情の組）。"@ja ;
+    plu:hasComponentEmotion plu:Fear , plu:Sadness .
+plu:Unbelief a owl:NamedIndividual , plu:SecondaryDyad ;
+    rdfs:label "Unbelief"@en , "不信"@ja ; skos:altLabel "Shock"@en ;
+    skos:definition "The secondary dyad of surprise and disgust (one step apart on the wheel)."@en ,
+        "驚きと嫌悪の二次 dyad（wheel 上で1 つおきの基本感情の組）。"@ja ;
+    plu:hasComponentEmotion plu:Surprise , plu:Disgust .
+plu:Envy a owl:NamedIndividual , plu:SecondaryDyad ;
+    rdfs:label "Envy"@en , "羨望"@ja ;
+    skos:definition "The secondary dyad of sadness and anger (one step apart on the wheel)."@en ,
+        "悲しみと怒りの二次 dyad（wheel 上で1 つおきの基本感情の組）。"@ja ;
+    plu:hasComponentEmotion plu:Sadness , plu:Anger .
+plu:Cynicism a owl:NamedIndividual , plu:SecondaryDyad ;
+    rdfs:label "Cynicism"@en , "冷笑"@ja ;
+    skos:definition "The secondary dyad of disgust and anticipation (one step apart on the wheel)."@en ,
+        "嫌悪と期待の二次 dyad（wheel 上で1 つおきの基本感情の組）。"@ja ;
+    plu:hasComponentEmotion plu:Disgust , plu:Anticipation .
+plu:Pride a owl:NamedIndividual , plu:SecondaryDyad ;
+    rdfs:label "Pride"@en , "誇り"@ja ;
+    skos:definition "The secondary dyad of anger and joy (one step apart on the wheel)."@en ,
+        "怒りと喜びの二次 dyad（wheel 上で1 つおきの基本感情の組）。"@ja ;
+    plu:hasComponentEmotion plu:Anger , plu:Joy .
+plu:Hope a owl:NamedIndividual , plu:SecondaryDyad ;
+    rdfs:label "Hope"@en , "希望"@ja ; skos:altLabel "Fatalism"@en ;
+    skos:definition "The secondary dyad of anticipation and trust (one step apart on the wheel)."@en ,
+        "期待と信頼の二次 dyad（wheel 上で1 つおきの基本感情の組）。"@ja ;
+    plu:hasComponentEmotion plu:Anticipation , plu:Trust .
+
+#################### Tertiary dyads (8) ####################
+plu:Delight a owl:NamedIndividual , plu:TertiaryDyad ;
+    rdfs:label "Delight"@en , "歓喜"@ja ;
+    skos:definition "The tertiary dyad of joy and surprise (two steps apart on the wheel)."@en ,
+        "喜びと驚きの三次 dyad（wheel 上で2 つおきの基本感情の組）。"@ja ;
+    plu:hasComponentEmotion plu:Joy , plu:Surprise .
+plu:Sentimentality a owl:NamedIndividual , plu:TertiaryDyad ;
+    rdfs:label "Sentimentality"@en , "感傷"@ja ;
+    skos:definition "The tertiary dyad of trust and sadness (two steps apart on the wheel)."@en ,
+        "信頼と悲しみの三次 dyad（wheel 上で2 つおきの基本感情の組）。"@ja ;
+    plu:hasComponentEmotion plu:Trust , plu:Sadness .
+plu:Shame a owl:NamedIndividual , plu:TertiaryDyad ;
+    rdfs:label "Shame"@en , "恥"@ja ;
+    skos:definition "The tertiary dyad of fear and disgust (two steps apart on the wheel)."@en ,
+        "恐れと嫌悪の三次 dyad（wheel 上で2 つおきの基本感情の組）。"@ja ;
+    plu:hasComponentEmotion plu:Fear , plu:Disgust .
+plu:Outrage a owl:NamedIndividual , plu:TertiaryDyad ;
+    rdfs:label "Outrage"@en , "憤慨"@ja ;
+    skos:definition "The tertiary dyad of surprise and anger (two steps apart on the wheel)."@en ,
+        "驚きと怒りの三次 dyad（wheel 上で2 つおきの基本感情の組）。"@ja ;
+    plu:hasComponentEmotion plu:Surprise , plu:Anger .
+plu:Pessimism a owl:NamedIndividual , plu:TertiaryDyad ;
+    rdfs:label "Pessimism"@en , "悲観"@ja ;
+    skos:definition "The tertiary dyad of sadness and anticipation (two steps apart on the wheel)."@en ,
+        "悲しみと期待の三次 dyad（wheel 上で2 つおきの基本感情の組）。"@ja ;
+    plu:hasComponentEmotion plu:Sadness , plu:Anticipation .
+plu:Morbidness a owl:NamedIndividual , plu:TertiaryDyad ;
+    rdfs:label "Morbidness"@en , "病的好奇"@ja ;
+    skos:definition "The tertiary dyad of disgust and joy (two steps apart on the wheel)."@en ,
+        "嫌悪と喜びの三次 dyad（wheel 上で2 つおきの基本感情の組）。"@ja ;
+    plu:hasComponentEmotion plu:Disgust , plu:Joy .
+plu:Dominance a owl:NamedIndividual , plu:TertiaryDyad ;
+    rdfs:label "Dominance"@en , "支配"@ja ;
+    skos:definition "The tertiary dyad of anger and trust (two steps apart on the wheel)."@en ,
+        "怒りと信頼の三次 dyad（wheel 上で2 つおきの基本感情の組）。"@ja ;
+    plu:hasComponentEmotion plu:Anger , plu:Trust .
+plu:Anxiety a owl:NamedIndividual , plu:TertiaryDyad ;
+    rdfs:label "Anxiety"@en , "懸念"@ja ;
+    skos:definition "The tertiary dyad of anticipation and fear (two steps apart on the wheel)."@en ,
+        "期待と恐れの三次 dyad（wheel 上で2 つおきの基本感情の組）。"@ja ;
+    plu:hasComponentEmotion plu:Anticipation , plu:Fear .
+
+#################### Derivation Rules（決定 7。infer_dyads.rq は min の規則だけで事例を作る）####################
+plu:Rule_DyadMin a owl:NamedIndividual , plu:DerivationRule ;
+    rdfs:label "Dyad Minimum Aggregation (TH=0.5)"@en , "dyad の最小値集約（TH=0.5）"@ja ;
+    plu:thresholdParameter "0.5"^^xsd:float ; plu:aggregationFunction "min" ;
+    skos:definition "Derivation rule that instantiates a dyad when both component emotions have intensity at or above 0.5, taking the minimum as the dyad intensity."@en ,
+        "成分の 2 感情の強度がともに 0.5 以上のとき dyad の事例を作り、最小値を dyad の強度とする導出規則。"@ja .
+plu:Rule_DyadMin_TH03 a owl:NamedIndividual , plu:DerivationRule ;
+    rdfs:label "Dyad Minimum Aggregation (TH=0.3)"@en , "dyad の最小値集約（TH=0.3）"@ja ;
+    plu:thresholdParameter "0.3"^^xsd:float ; plu:aggregationFunction "min" ;
+    skos:definition "Variant of the dyad-minimum rule with activation threshold 0.3."@en , "閾値を 0.3 にした最小値集約の規則。"@ja .
+plu:Rule_DyadMin_TH07 a owl:NamedIndividual , plu:DerivationRule ;
+    rdfs:label "Dyad Minimum Aggregation (TH=0.7)"@en , "dyad の最小値集約（TH=0.7）"@ja ;
+    plu:thresholdParameter "0.7"^^xsd:float ; plu:aggregationFunction "min" ;
+    skos:definition "Variant of the dyad-minimum rule with activation threshold 0.7."@en , "閾値を 0.7 にした最小値集約の規則。"@ja .
+
+# min（Gödel t-norm）の一般化。成分が反相関する dyad（例: pride = anger + joy）で min が崩壊するため、
+# 補償的な集約と較正閾値を規則として形式化する（CombineEFOMoE 方向4）。SPARQL では事例を作らない（#15）。
+plu:Rule_DyadGeoMean a owl:NamedIndividual , plu:DerivationRule ;
+    rdfs:label "Dyad Geometric-Mean Aggregation (TH=0.5)"@en , "dyad の幾何平均集約（TH=0.5）"@ja ;
+    plu:thresholdParameter "0.5"^^xsd:float ; plu:aggregationFunction "geometric_mean" ;
+    skos:definition "sqrt(P(a)*P(b)) >= TH. Compensatory; monotone-equivalent to the product t-norm."@en ,
+        "sqrt(P(a)*P(b)) >= TH。補償的で、積 t-norm と単調に同値。"@ja .
+plu:Rule_DyadArithMean a owl:NamedIndividual , plu:DerivationRule ;
+    rdfs:label "Dyad Arithmetic-Mean Aggregation (TH=0.5)"@en , "dyad の算術平均集約（TH=0.5）"@ja ;
+    plu:thresholdParameter "0.5"^^xsd:float ; plu:aggregationFunction "arithmetic_mean" ;
+    skos:definition "(P(a)+P(b))/2 >= TH. Fully compensatory (not a t-norm)."@en , "(P(a)+P(b))/2 >= TH。完全に補償的（t-norm ではない）。"@ja .
+plu:Rule_DyadProduct a owl:NamedIndividual , plu:DerivationRule ;
+    rdfs:label "Dyad Product Aggregation (TH=0.5)"@en , "dyad の積集約（TH=0.5）"@ja ;
+    plu:thresholdParameter "0.5"^^xsd:float ; plu:aggregationFunction "product" ;
+    skos:definition "P(a)*P(b) >= TH. Product t-norm."@en , "P(a)*P(b) >= TH。積 t-norm。"@ja .
+plu:Rule_DyadMin_CalibratedTH a owl:NamedIndividual , plu:DerivationRule ;
+    rdfs:label "Dyad Minimum Aggregation (validation-calibrated per-dyad TH)"@en , "dyad の最小値集約（dyad ごとに validation で較正した TH）"@ja ;
+    plu:aggregationFunction "min" ;
+    skos:definition "min(P(a),P(b)) >= TH_c where TH_c maximises F1 on the validation split for each dyad c. The concrete TH_c used by a derivation is recorded on the occurrence in the provenance KG."@en ,
+        "min(P(a),P(b)) >= TH_c。TH_c は dyad c ごとに validation の F1 を最大にする値で、実際に使った値は provenance KG の事例に記録する。"@ja .
