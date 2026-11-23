@@ -1,0 +1,80 @@
+@prefix sh:   <http://www.w3.org/ns/shacl#> .
+@prefix plu:  <https://w3id.org/efo-plutchik#> .
+@prefix map:  <https://w3id.org/efo-plutchik/mapping#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+
+# v0.5.0 写像の妥当性 SHACL（conforms でなければならない）。コア efo-plutchik.ttl と plutchik-mappings.ttl をマージして当てる。
+# 対象は map:ConceptMapping（Plutchik2001Names 方式）と、全ラベルの網羅（両方式）。
+# Lim & Cheong の成分写像の監査は mapping_audit_shapes.ttl（既知の Violation / Warning がある）。
+
+map:shapesPrefixes a owl:Ontology ;
+    sh:declare [ sh:prefix "plu" ; sh:namespace "https://w3id.org/efo-plutchik#"^^xsd:anyURI ] ;
+    sh:declare [ sh:prefix "map" ; sh:namespace "https://w3id.org/efo-plutchik/mapping#"^^xsd:anyURI ] ;
+    sh:declare [ sh:prefix "rdfs" ; sh:namespace "http://www.w3.org/2000/01/rdf-schema#"^^xsd:anyURI ] ;
+    sh:declare [ sh:prefix "skos" ; sh:namespace "http://www.w3.org/2004/02/skos/core#"^^xsd:anyURI ] .
+
+map:ConceptMappingShape a sh:NodeShape ;
+    sh:targetClass map:ConceptMapping ;
+    sh:property [ sh:path map:mapsTo ; sh:minCount 1 ; sh:maxCount 1 ; sh:class plu:PlutchikEmotion ;
+                  sh:message "A concept mapping must target exactly one Plutchik emotion."@en ] ;
+    sh:property [ sh:path map:matchType ; sh:minCount 1 ; sh:maxCount 1 ; sh:in ( skos:closeMatch skos:broadMatch ) ;
+                  sh:message "A concept mapping must state one match type (closeMatch or broadMatch)."@en ] ;
+    sh:property [ sh:path map:basis ; sh:minCount 1 ; sh:datatype xsd:string ;
+                  sh:message "A concept mapping must record its basis."@en ] ;
+    sh:property [ sh:path map:label ; sh:minCount 1 ; sh:maxCount 1 ; sh:class skos:Concept ;
+                  sh:message "A mapping record must be about exactly one dataset label concept."@en ] ;
+    sh:sparql [
+        sh:message "A closeMatch must be justified by an identical name (dataset label = English label of the Plutchik term)."@en ;
+        sh:prefixes map:shapesPrefixes ;
+        sh:select """
+            SELECT $this ?value WHERE {
+                $this map:matchType skos:closeMatch ; map:mapsTo ?value ; map:sourceLabel ?l .
+                FILTER NOT EXISTS { ?value rdfs:label ?en . FILTER(LANG(?en) = "en" && LCASE(STR(?en)) = LCASE(STR(?l))) }
+            }""" ;
+    ] ;
+    sh:sparql [
+        sh:message "A broadMatch (Ekman grouping fallback) must target a basic emotion."@en ;
+        sh:prefixes map:shapesPrefixes ;
+        sh:select """
+            SELECT $this ?value WHERE {
+                $this map:matchType skos:broadMatch ; map:mapsTo ?value .
+                FILTER NOT EXISTS { ?value a plu:BasicEmotion }
+            }""" ;
+    ] ;
+    sh:sparql [
+        sh:message "The direct SKOS triple on the label concept must agree with the reified mapping."@en ;
+        sh:prefixes map:shapesPrefixes ;
+        sh:select """
+            SELECT $this ?value WHERE {
+                $this map:label ?c ; map:matchType ?mt ; map:mapsTo ?value .
+                FILTER NOT EXISTS { ?c ?mt ?value }
+            }""" ;
+    ] .
+
+map:UnmappedLabelShape a sh:NodeShape ;
+    sh:targetClass map:UnmappedLabel ;
+    sh:property [ sh:path map:basis ; sh:minCount 1 ; sh:datatype xsd:string ;
+                  sh:message "An unmapped label must record the reason."@en ] ;
+    sh:property [ sh:path map:mapsTo ; sh:maxCount 0 ;
+                  sh:message "An unmapped label must not map to anything."@en ] .
+
+map:LabelCoverageShape a sh:NodeShape ;
+    sh:targetClass skos:Concept ;
+    sh:sparql [
+        sh:message "Every dataset label must have exactly one record (mapping or unmapped) in each mapping scheme."@en ;
+        sh:prefixes map:shapesPrefixes ;
+        sh:select """
+            SELECT $this ?value WHERE {
+                ?value a map:MappingScheme .
+                {
+                    SELECT $this ?value (COUNT(DISTINCT ?r) AS ?n) WHERE {
+                        $this a skos:Concept . ?value a map:MappingScheme .
+                        OPTIONAL { ?r map:label $this ; map:inScheme ?value . }
+                    } GROUP BY $this ?value
+                }
+                FILTER(?n != 1)
+            }""" ;
+    ] .

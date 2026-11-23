@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+.env
+*.egg-info/
+.DS_Store
+
+# NRC VAD（研究・非商用）から生成した VAD。同梱しない（CombineEFOMoE #33）
+ontology/plutchik-vad.ttl
+
+# EFO スキーマ（上流 StenDoipanni/EFO、ライセンス宣言なし）は再配布しない。
+# src/provenance/validate.py の ensure_efo_schema() が固定コミットから取得してここにキャッシュする（#56）
+ontology/efo-src/

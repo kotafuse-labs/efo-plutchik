@@ -1,0 +1,54 @@
+@prefix sh:   <http://www.w3.org/ns/shacl#> .
+@prefix plu:  <https://w3id.org/efo-plutchik#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+
+# ドキュメント完全性 SHACL: efo-plutchik.ttl の各 term (クラス / プロパティ / 個体) が
+# rdfs:label (表示名) と skos:definition (定義文) を必ず持つことを機械検証する。
+# FAIR の Reusability (定義文の網羅) を「散文の主張」から「機械検証された事実」へ引き上げる。
+# 新 term を label/定義なしで足すと即座に non-conforming になる (silent doc regression を封じる)。
+# src/provenance/validate.py:validate_documentation が pySHACL で適用する。
+# 対象は rdf:type で選ぶ (inference="none")。efo-plutchik.ttl 単独では型付き term は
+# すべて本モジュール由来 (emo:EmotionSituation はローカル宣言) なので過剰ヒットしない。
+
+plu:ClassDocShape a sh:NodeShape ;
+    sh:targetClass owl:Class ;
+    sh:property [ sh:path rdfs:label ; sh:minCount 1 ;
+                  sh:message "Every class must have an rdfs:label."@en ] ;
+    sh:property [ sh:path skos:definition ; sh:minCount 1 ; sh:datatype rdf:langString ;
+                  sh:message "Every class must have a skos:definition (language-tagged)."@en ] .
+
+plu:ObjectPropertyDocShape a sh:NodeShape ;
+    sh:targetClass owl:ObjectProperty ;
+    sh:property [ sh:path rdfs:label ; sh:minCount 1 ;
+                  sh:message "Every object property must have an rdfs:label."@en ] ;
+    sh:property [ sh:path skos:definition ; sh:minCount 1 ; sh:datatype rdf:langString ;
+                  sh:message "Every object property must have a skos:definition (language-tagged)."@en ] .
+
+plu:DatatypePropertyDocShape a sh:NodeShape ;
+    sh:targetClass owl:DatatypeProperty ;
+    sh:property [ sh:path rdfs:label ; sh:minCount 1 ;
+                  sh:message "Every datatype property must have an rdfs:label."@en ] ;
+    sh:property [ sh:path skos:definition ; sh:minCount 1 ; sh:datatype rdf:langString ;
+                  sh:message "Every datatype property must have a skos:definition (language-tagged)."@en ] .
+
+plu:IndividualDocShape a sh:NodeShape ;
+    sh:targetClass owl:NamedIndividual ;
+    sh:property [ sh:path rdfs:label ; sh:minCount 1 ;
+                  sh:message "Every named individual must have an rdfs:label."@en ] ;
+    sh:property [ sh:path skos:definition ; sh:minCount 1 ; sh:datatype rdf:langString ;
+                  sh:message "Every named individual must have a skos:definition (language-tagged)."@en ] .
+
+# v0.5.0: rdfs:label と skos:definition を @en / @ja の両方で必須化する（バイリンガル完全性）。
+plu:BilingualDocShape a sh:NodeShape ;
+    sh:targetClass owl:Class , owl:ObjectProperty , owl:DatatypeProperty , owl:NamedIndividual ;
+    sh:property [ sh:path rdfs:label ; sh:qualifiedValueShape [ sh:languageIn ( "en" ) ] ; sh:qualifiedMinCount 1 ;
+                  sh:message "Every term must have an English rdfs:label (@en)."@en ] ;
+    sh:property [ sh:path rdfs:label ; sh:qualifiedValueShape [ sh:languageIn ( "ja" ) ] ; sh:qualifiedMinCount 1 ;
+                  sh:message "Every term must have a Japanese rdfs:label (@ja)."@en ] ;
+    sh:property [ sh:path skos:definition ; sh:qualifiedValueShape [ sh:languageIn ( "en" ) ] ; sh:qualifiedMinCount 1 ;
+                  sh:message "Every term must have an English skos:definition (@en)."@en ] ;
+    sh:property [ sh:path skos:definition ; sh:qualifiedValueShape [ sh:languageIn ( "ja" ) ] ; sh:qualifiedMinCount 1 ;
+                  sh:message "Every term must have a Japanese skos:definition (@ja)."@en ] .

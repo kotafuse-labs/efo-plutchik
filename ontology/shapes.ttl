@@ -1,0 +1,67 @@
+@prefix sh:   <http://www.w3.org/ns/shacl#> .
+@prefix plu:  <https://w3id.org/efo-plutchik#> .
+@prefix emo:  <http://www.ontologydesignpatterns.org/ont/emotions/EmoCore.owl#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+# EFO-Plutchik SHACL 制約 — 設計仕様書 v0.4.0 §7.2 (決定10) の 4 Shape。
+# pySHACL (advanced=True) で実行。validate.py が読み込む。
+
+# SHACL-SPARQL 制約用の prefix 宣言。
+plu:shapesPrefixes a owl:Ontology ;
+    sh:declare [ sh:prefix "plu" ; sh:namespace "https://w3id.org/efo-plutchik#"^^xsd:anyURI ] ;
+    sh:declare [ sh:prefix "emo" ; sh:namespace "http://www.ontologydesignpatterns.org/ont/emotions/EmoCore.owl#"^^xsd:anyURI ] .
+
+#################### 7.2.1 EmotionSituationShape (全 occurrence に適用) ####################
+plu:EmotionSituationShape a sh:NodeShape ;
+    sh:targetClass emo:EmotionSituation ;
+    sh:property [
+        sh:path plu:isManifestationOf ;
+        sh:minCount 1 ;
+        sh:nodeKind sh:IRI ;
+        sh:message "An emotion situation must have at least one isManifestationOf relation."@en ;
+    ] .
+
+#################### 7.2.2 DyadOccurrenceShape (複合感情事例に適用) ####################
+# dyad occurrence は derivedByRule を持つ occ として選別 (targetSubjectsOf, SHACL Core)。
+plu:DyadOccurrenceShape a sh:NodeShape ;
+    sh:targetSubjectsOf plu:derivedByRule ;
+    sh:property [
+        sh:path plu:derivedFrom ;
+        sh:minCount 2 ;
+        sh:maxCount 2 ;
+        sh:message "A dyad occurrence must derive from exactly 2 basic emotion occurrences."@en ;
+    ] ;
+    sh:property [
+        sh:path plu:derivedByRule ;
+        sh:minCount 1 ;
+        sh:class plu:DerivationRule ;
+        sh:message "A dyad occurrence must be derived by a DerivationRule."@en ;
+    ] .
+
+#################### 7.2.3 ProvenanceConsistencyShape (循環・自己参照の禁止) ####################
+plu:ProvenanceConsistencyShape a sh:NodeShape ;
+    sh:targetClass emo:EmotionSituation ;
+    sh:sparql [
+        sh:message "Provenance must be acyclic: an occurrence must not derive from itself (transitively)."@en ;
+        sh:prefixes plu:shapesPrefixes ;
+        sh:select """SELECT $this WHERE { $this plu:derivedFrom+ $this . }""" ;
+    ] .
+
+#################### 7.2.4 ContextConsistencyShape (同一テキスト文脈の保証) ####################
+plu:ContextConsistencyShape a sh:NodeShape ;
+    sh:targetClass emo:EmotionSituation ;
+    sh:sparql [
+        sh:message "A derived occurrence must share the same sourceText as each of its sources."@en ;
+        sh:prefixes plu:shapesPrefixes ;
+        sh:select """
+            SELECT $this ?source_text ?derived_text
+            WHERE {
+                $this plu:sourceText ?source_text .
+                $this plu:derivedFrom ?derived_occ .
+                ?derived_occ plu:sourceText ?derived_text .
+                FILTER (?source_text != ?derived_text)
+            }
+        """ ;
+    ] .

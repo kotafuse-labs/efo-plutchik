@@ -1,0 +1,173 @@
+@prefix sh:   <http://www.w3.org/ns/shacl#> .
+@prefix plu:  <https://w3id.org/efo-plutchik#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+
+# 理論グラフ (efo-plutchik.ttl) 自体の構造健全性を検証する SHACL (Tier2 ④)。
+# occurrence ではなく TBox/個体の定義そのものを対象にし、dyad 定義の typo
+# (構成感情の数違い・対極の取り違え 等) を機械的に弾く。
+# src/provenance/validate.py:validate_theory_graph が pySHACL (advanced=True) で適用する。
+
+plu:theoryPrefixes a owl:Ontology ;
+    sh:declare [ sh:prefix "plu" ; sh:namespace "https://w3id.org/efo-plutchik#"^^xsd:anyURI ] .
+
+#################### Primary Dyad の構成 ####################
+# 各 primary dyad はちょうど 2 つの基本感情から構成され、その 2 感情は対極でない (wheel 隣接)。
+plu:PrimaryDyadShape a sh:NodeShape ;
+    sh:targetClass plu:PrimaryDyad ;
+    sh:property [
+        sh:path plu:hasComponentEmotion ;
+        sh:minCount 2 ; sh:maxCount 2 ;
+        sh:nodeKind sh:IRI ; sh:class plu:BasicEmotion ;
+        sh:message "A primary dyad must combine exactly two basic emotions."@en ;
+    ] ;
+    sh:sparql [
+        sh:message "A primary dyad's two components must be adjacent (not an opposite pair)."@en ;
+        sh:prefixes plu:theoryPrefixes ;
+        sh:select """
+            SELECT $this WHERE {
+                $this plu:hasComponentEmotion ?a, ?b .
+                FILTER(?a != ?b)
+                { ?a plu:hasOpposite ?b } UNION { ?b plu:hasOpposite ?a }
+            }
+        """ ;
+    ] .
+
+#################### 基本感情の対極 ####################
+# 各基本感情はちょうど 1 つの対極をもつ (片方向宣言を inversePath で双方向に数える)。
+plu:BasicEmotionOppositeShape a sh:NodeShape ;
+    sh:targetClass plu:BasicEmotion ;
+    sh:property [
+        sh:path [ sh:alternativePath ( plu:hasOpposite [ sh:inversePath plu:hasOpposite ] ) ] ;
+        sh:minCount 1 ; sh:maxCount 1 ;
+        sh:nodeKind sh:IRI ; sh:class plu:BasicEmotion ;
+        sh:message "A basic emotion must have exactly one opposite (counted in either direction)."@en ;
+    ] .
+
+# hasOpposite は非反射: どの感情も自分自身を対極にしない。
+plu:OppositeIrreflexiveShape a sh:NodeShape ;
+    sh:targetSubjectsOf plu:hasOpposite ;
+    sh:sparql [
+        sh:message "hasOpposite must be irreflexive (no emotion is its own opposite)."@en ;
+        sh:prefixes plu:theoryPrefixes ;
+        sh:select """SELECT $this WHERE { $this plu:hasOpposite $this . }""" ;
+    ] .
+
+#################### v0.5.0: dyad 24・強度の変種・wheel の幾何 ####################
+# 円周上の距離 d(a,b) = min(|pa-pb|, 8-|pa-pb|)。primary = 1、secondary = 2、tertiary = 3、対極 = 4。
+
+plu:DyadComponentsShape a sh:NodeShape ;
+    sh:targetClass plu:SecondaryDyad , plu:TertiaryDyad ;
+    sh:property [
+        sh:path plu:hasComponentEmotion ;
+        sh:minCount 2 ; sh:maxCount 2 ;
+        sh:nodeKind sh:IRI ; sh:class plu:BasicEmotion ;
+        sh:message "A dyad must combine exactly two basic emotions."@en ;
+    ] .
+
+plu:DyadWheelDistanceShape a sh:NodeShape ;
+    sh:targetClass plu:PrimaryDyad , plu:SecondaryDyad , plu:TertiaryDyad ;
+    sh:sparql [
+        sh:message "The wheel distance of a dyad's components must match its class (primary 1, secondary 2, tertiary 3)."@en ;
+        sh:prefixes plu:theoryPrefixes ;
+        sh:select """
+            SELECT $this WHERE {
+                $this plu:hasComponentEmotion ?a , ?b .
+                FILTER(STR(?a) < STR(?b))
+                ?a plu:wheelPosition ?pa . ?b plu:wheelPosition ?pb .
+                BIND(IF(?pa > ?pb, ?pa - ?pb, ?pb - ?pa) AS ?raw)
+                BIND(IF(?raw > 4, 8 - ?raw, ?raw) AS ?d)
+                BIND(IF(EXISTS { $this a plu:PrimaryDyad }, 1,
+                     IF(EXISTS { $this a plu:SecondaryDyad }, 2, 3)) AS ?want)
+                FILTER(?d != ?want)
+            }
+        """ ;
+    ] .
+
+plu:EveryPairOneDyadShape a sh:NodeShape ;
+    sh:targetClass plu:BasicEmotion ;
+    sh:sparql [
+        sh:message "Every pair of non-opposite basic emotions must form exactly one dyad (24 dyads over 28 pairs minus 4 opposites)."@en ;
+        sh:prefixes plu:theoryPrefixes ;
+        sh:select """
+            SELECT $this ?value WHERE {
+                ?value a plu:BasicEmotion .
+                FILTER(STR($this) < STR(?value))
+                FILTER NOT EXISTS { $this plu:hasOpposite ?value } FILTER NOT EXISTS { ?value plu:hasOpposite $this }
+                {
+                    SELECT $this ?value (COUNT(DISTINCT ?d) AS ?n) WHERE {
+                        $this a plu:BasicEmotion . ?value a plu:BasicEmotion .
+                        OPTIONAL { ?d plu:hasComponentEmotion $this , ?value . }
+                    } GROUP BY $this ?value
+                }
+                FILTER(?n != 1)
+            }
+        """ ;
+    ] .
+
+plu:BasicEmotionWheelShape a sh:NodeShape ;
+    sh:targetClass plu:BasicEmotion ;
+    sh:property [
+        sh:path plu:wheelPosition ; sh:minCount 1 ; sh:maxCount 1 ;
+        sh:datatype xsd:integer ; sh:minInclusive 0 ; sh:maxInclusive 7 ;
+        sh:message "A basic emotion must have exactly one wheel position in 0..7."@en ;
+    ] ;
+    sh:property [
+        sh:path plu:hasIntensityLevel ; sh:minCount 1 ; sh:maxCount 1 ; sh:hasValue plu:MediumIntensity ;
+        sh:message "A basic emotion is the medium-intensity form of its petal."@en ;
+    ] ;
+    sh:property [
+        sh:path [ sh:inversePath plu:intensityOf ] ; sh:minCount 2 ; sh:maxCount 2 ;
+        sh:message "A basic emotion must have exactly two intensity variants (low and high)."@en ;
+    ] ;
+    sh:sparql [
+        sh:message "Wheel positions must be unique, and opposites must be 4 steps apart."@en ;
+        sh:prefixes plu:theoryPrefixes ;
+        sh:select """
+            SELECT $this ?value WHERE {
+                $this plu:wheelPosition ?p .
+                {
+                    ?value a plu:BasicEmotion ; plu:wheelPosition ?p . FILTER(?value != $this)
+                } UNION {
+                    { $this plu:hasOpposite ?value } UNION { ?value plu:hasOpposite $this }
+                    ?value plu:wheelPosition ?q .
+                    FILTER(?p - ?q != 4 && ?q - ?p != 4)
+                }
+            }
+        """ ;
+    ] .
+
+plu:AdjacencyShape a sh:NodeShape ;
+    sh:targetSubjectsOf plu:isAdjacentTo ;
+    sh:sparql [
+        sh:message "isAdjacentTo must hold exactly between basic emotions one step apart on the wheel."@en ;
+        sh:prefixes plu:theoryPrefixes ;
+        sh:select """
+            SELECT $this ?value WHERE {
+                $this plu:isAdjacentTo ?value ; plu:wheelPosition ?p . ?value plu:wheelPosition ?q .
+                BIND(IF(?p > ?q, ?p - ?q, ?q - ?p) AS ?raw)
+                FILTER(?raw != 1 && ?raw != 7)
+            }
+        """ ;
+    ] .
+
+plu:IntensityVariantShape a sh:NodeShape ;
+    sh:targetClass plu:IntensityVariant ;
+    sh:property [
+        sh:path plu:intensityOf ; sh:minCount 1 ; sh:maxCount 1 ; sh:class plu:BasicEmotion ;
+        sh:message "An intensity variant must belong to exactly one basic emotion."@en ;
+    ] ;
+    sh:property [
+        sh:path plu:hasIntensityLevel ; sh:minCount 1 ; sh:maxCount 1 ; sh:in ( plu:LowIntensity plu:HighIntensity ) ;
+        sh:message "An intensity variant must be either low or high intensity."@en ;
+    ] ;
+    sh:sparql [
+        sh:message "The two variants of a basic emotion must have different levels (one low, one high)."@en ;
+        sh:prefixes plu:theoryPrefixes ;
+        sh:select """
+            SELECT $this ?value WHERE {
+                $this plu:intensityOf ?b ; plu:hasIntensityLevel ?l .
+                ?value plu:intensityOf ?b ; plu:hasIntensityLevel ?l . FILTER(?value != $this)
+            }
+        """ ;
+    ] .

@@ -1,0 +1,98 @@
+@prefix sh:   <http://www.w3.org/ns/shacl#> .
+@prefix plu:  <https://w3id.org/efo-plutchik#> .
+@prefix map:  <https://w3id.org/efo-plutchik/mapping#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+# ラベル写像の監査 shape（CombineEFOMoE Issue #22 から移植、v0.5.0）。対象 = map:ComponentMapping（Lim & Cheong 方式）（データセットの原ラベル → Plutchik 基本感情 1〜2 個）。
+# データグラフ = efo-plutchik.ttl（v0.5.0 は dyad 24 を含む）+ plutchik-mappings.ttl。pySHACL (advanced=True, inference none) で実行。
+#  M1 Violation: 2 成分が plu:hasOpposite の対立対（Plutchik では対立対は dyad を成さず「葛藤」になる）
+#  M2 Violation: 2 成分の対が primary / secondary / tertiary のどの dyad にも無い
+#  M3 Warning  : 成分対は dyad だが、原ラベル名が Plutchik の dyad 名と一致しない（意味のずれ。採否は人が判断）
+#  M4 Info     : 1 成分の写像で原ラベル名が基本感情名と異なる（強度変種として正当化が要る: annoyance < anger など）
+#  M0 Violation: 写像先は plu:BasicEmotion を 1〜2 個
+
+map:shapesPrefixes a owl:Ontology ;
+    sh:declare [ sh:prefix "plu" ; sh:namespace "https://w3id.org/efo-plutchik#"^^xsd:anyURI ] ;
+    sh:declare [ sh:prefix "map" ; sh:namespace "https://w3id.org/efo-plutchik/mapping#"^^xsd:anyURI ] ;
+    sh:declare [ sh:prefix "rdfs" ; sh:namespace "http://www.w3.org/2000/01/rdf-schema#"^^xsd:anyURI ] .
+
+map:MappingArityShape a sh:NodeShape ;
+    sh:targetClass map:ComponentMapping ;
+    sh:property [
+        sh:path map:mapsTo ;
+        sh:minCount 1 ; sh:maxCount 2 ;
+        sh:class plu:BasicEmotion ;
+        sh:message "A label mapping must target 1 or 2 Plutchik basic emotions."@en ;
+    ] ;
+    sh:property [
+        sh:path map:sourceLabel ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ;
+        sh:message "A label mapping must carry exactly one source label."@en ;
+    ] .
+
+map:NoOppositeComponentsShape a sh:NodeShape ;
+    sh:targetClass map:ComponentMapping ;
+    sh:severity sh:Violation ;
+    sh:sparql [
+        sh:message "Mapping composes two opposite emotions (hasOpposite); opposites do not form a dyad in Plutchik's model."@en ;
+        sh:prefixes map:shapesPrefixes ;
+        sh:select """
+            SELECT $this ?value WHERE {
+                $this map:mapsTo ?a , ?b .
+                FILTER(STR(?a) < STR(?b))
+                { ?a plu:hasOpposite ?b } UNION { ?b plu:hasOpposite ?a }
+                BIND(?a AS ?value)
+            }""" ;
+    ] .
+
+map:ComponentsFormDyadShape a sh:NodeShape ;
+    sh:targetClass map:ComponentMapping ;
+    sh:severity sh:Violation ;
+    sh:sparql [
+        sh:message "Mapping composes two emotions that do not form any primary/secondary/tertiary dyad."@en ;
+        sh:prefixes map:shapesPrefixes ;
+        sh:select """
+            SELECT $this ?value WHERE {
+                $this map:mapsTo ?a , ?b .
+                FILTER(STR(?a) < STR(?b))
+                FILTER NOT EXISTS {
+                    ?d a/rdfs:subClassOf* plu:Dyad ; plu:hasComponentEmotion ?a , ?b .
+                }
+                BIND(?a AS ?value)
+            }""" ;
+    ] .
+
+map:DyadNameAgreementShape a sh:NodeShape ;
+    sh:targetClass map:ComponentMapping ;
+    sh:severity sh:Warning ;
+    sh:sparql [
+        sh:message "Components form a Plutchik dyad whose name differs from the source label (semantic drift; review the mapping)."@en ;
+        sh:prefixes map:shapesPrefixes ;
+        sh:select """
+            SELECT $this ?value WHERE {
+                $this map:mapsTo ?a , ?b ; map:sourceLabel ?l .
+                FILTER(STR(?a) < STR(?b))
+                ?d a/rdfs:subClassOf* plu:Dyad ; plu:hasComponentEmotion ?a , ?b ; rdfs:label ?dl .
+                FILTER(LANG(?dl) = "en")   # v0.5.0: @ja ラベルとは比べない
+                FILTER(LCASE(STR(?dl)) != LCASE(STR(?l)))
+                BIND(?d AS ?value)
+            }""" ;
+    ] .
+
+map:IntensityVariantShape a sh:NodeShape ;
+    sh:targetClass map:ComponentMapping ;
+    sh:severity sh:Info ;
+    sh:sparql [
+        sh:message "Single-emotion mapping whose source label differs from the basic emotion's name (intensity variant; needs justification)."@en ;
+        sh:prefixes map:shapesPrefixes ;
+        sh:select """
+            SELECT $this ?value WHERE {
+                $this map:mapsTo ?e ; map:sourceLabel ?l .
+                FILTER NOT EXISTS { $this map:mapsTo ?other . FILTER(?other != ?e) }
+                ?e rdfs:label ?el .
+                FILTER(LANG(?el) = "en")   # v0.5.0: @ja ラベルとは比べない
+                FILTER(LCASE(STR(?el)) != LCASE(STR(?l)))
+                BIND(?e AS ?value)
+            }""" ;
+    ] .

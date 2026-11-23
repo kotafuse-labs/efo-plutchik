@@ -1,0 +1,82 @@
+@prefix plu:  <https://w3id.org/efo-plutchik#> .
+@prefix emo:  <http://www.ontologydesignpatterns.org/ont/emotions/EmoCore.owl#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix ex:   <https://w3id.org/efo-plutchik/sample#> .
+
+# 検証用サンプル基本感情 occurrence。設計仕様書 v0.4.0 §6.1.2 に忠実。
+# 事前学習感情分類器 (SamLowe/roberta-base-go_emotions 想定) の出力を Plutchik 基本感情に
+# マッピングしたもの。閾値未満の基本感情は materialize しない (決定8)。
+# 同一 plu:sourceText を持つ 2 基本感情が両方 TH 以上のとき infer_dyads.rq が dyad を生成する。
+#
+# 期待される dyad (TH=0.5 / Rule_DyadMin):
+#   doc_001 Love(Joy.8,Trust.6)→.6  doc_002 Optimism(Antic.75,Joy.7)→.7
+#   doc_003 Contempt(Disgust.9,Anger.8)→.8  doc_004 Submission(Trust.55,Fear.5)→.5
+#   doc_006 Love(Joy.95,Trust.9)→.9   (doc_005 は単独 Sadness → dyad なし、CQ-7 の健全性確認用)
+
+#################### doc_001: "I love him but still..." ####################
+ex:occ_001_joy a owl:NamedIndividual , emo:EmotionSituation ;
+    plu:isManifestationOf plu:Joy ;
+    plu:hasIntensityReading [ a plu:IntensityReading ; plu:about plu:Joy ; plu:value "0.8"^^xsd:float ] ;
+    plu:sourceText "I love him but still..." ;
+    plu:sourceModel <https://huggingface.co/SamLowe/roberta-base-go_emotions> .
+ex:occ_001_trust a owl:NamedIndividual , emo:EmotionSituation ;
+    plu:isManifestationOf plu:Trust ;
+    plu:hasIntensityReading [ a plu:IntensityReading ; plu:about plu:Trust ; plu:value "0.6"^^xsd:float ] ;
+    plu:sourceText "I love him but still..." ;
+    plu:sourceModel <https://huggingface.co/SamLowe/roberta-base-go_emotions> .
+
+#################### doc_002: "Finally things are looking up — I can't wait." ####################
+ex:occ_002_anticipation a owl:NamedIndividual , emo:EmotionSituation ;
+    plu:isManifestationOf plu:Anticipation ;
+    plu:hasIntensityReading [ a plu:IntensityReading ; plu:about plu:Anticipation ; plu:value "0.75"^^xsd:float ] ;
+    plu:sourceText "Finally things are looking up — I can't wait." ;
+    plu:sourceModel <https://huggingface.co/SamLowe/roberta-base-go_emotions> .
+ex:occ_002_joy a owl:NamedIndividual , emo:EmotionSituation ;
+    plu:isManifestationOf plu:Joy ;
+    plu:hasIntensityReading [ a plu:IntensityReading ; plu:about plu:Joy ; plu:value "0.7"^^xsd:float ] ;
+    plu:sourceText "Finally things are looking up — I can't wait." ;
+    plu:sourceModel <https://huggingface.co/SamLowe/roberta-base-go_emotions> .
+
+#################### doc_003: "What a vile and infuriating betrayal." ####################
+ex:occ_003_disgust a owl:NamedIndividual , emo:EmotionSituation ;
+    plu:isManifestationOf plu:Disgust ;
+    plu:hasIntensityReading [ a plu:IntensityReading ; plu:about plu:Disgust ; plu:value "0.9"^^xsd:float ] ;
+    plu:sourceText "What a vile and infuriating betrayal." ;
+    plu:sourceModel <https://huggingface.co/SamLowe/roberta-base-go_emotions> .
+ex:occ_003_anger a owl:NamedIndividual , emo:EmotionSituation ;
+    plu:isManifestationOf plu:Anger ;
+    plu:hasIntensityReading [ a plu:IntensityReading ; plu:about plu:Anger ; plu:value "0.8"^^xsd:float ] ;
+    plu:sourceText "What a vile and infuriating betrayal." ;
+    plu:sourceModel <https://huggingface.co/SamLowe/roberta-base-go_emotions> .
+
+#################### doc_004: "I trust you, though a part of me is afraid." ####################
+ex:occ_004_trust a owl:NamedIndividual , emo:EmotionSituation ;
+    plu:isManifestationOf plu:Trust ;
+    plu:hasIntensityReading [ a plu:IntensityReading ; plu:about plu:Trust ; plu:value "0.55"^^xsd:float ] ;
+    plu:sourceText "I trust you, though a part of me is afraid." ;
+    plu:sourceModel <https://huggingface.co/SamLowe/roberta-base-go_emotions> .
+ex:occ_004_fear a owl:NamedIndividual , emo:EmotionSituation ;
+    plu:isManifestationOf plu:Fear ;
+    plu:hasIntensityReading [ a plu:IntensityReading ; plu:about plu:Fear ; plu:value "0.5"^^xsd:float ] ;
+    plu:sourceText "I trust you, though a part of me is afraid." ;
+    plu:sourceModel <https://huggingface.co/SamLowe/roberta-base-go_emotions> .
+
+#################### doc_005: "It was all so heartbreaking." (単独 Sadness, dyad なし) ####################
+ex:occ_005_sadness a owl:NamedIndividual , emo:EmotionSituation ;
+    plu:isManifestationOf plu:Sadness ;
+    plu:hasIntensityReading [ a plu:IntensityReading ; plu:about plu:Sadness ; plu:value "0.6"^^xsd:float ] ;
+    plu:sourceText "It was all so heartbreaking." ;
+    plu:sourceModel <https://huggingface.co/SamLowe/roberta-base-go_emotions> .
+
+#################### doc_006: "I am deeply grateful and trust them completely." ####################
+ex:occ_006_joy a owl:NamedIndividual , emo:EmotionSituation ;
+    plu:isManifestationOf plu:Joy ;
+    plu:hasIntensityReading [ a plu:IntensityReading ; plu:about plu:Joy ; plu:value "0.95"^^xsd:float ] ;
+    plu:sourceText "I am deeply grateful and trust them completely." ;
+    plu:sourceModel <https://huggingface.co/SamLowe/roberta-base-go_emotions> .
+ex:occ_006_trust a owl:NamedIndividual , emo:EmotionSituation ;
+    plu:isManifestationOf plu:Trust ;
+    plu:hasIntensityReading [ a plu:IntensityReading ; plu:about plu:Trust ; plu:value "0.9"^^xsd:float ] ;
+    plu:sourceText "I am deeply grateful and trust them completely." ;
+    plu:sourceModel <https://huggingface.co/SamLowe/roberta-base-go_emotions> .

@@ -1,0 +1,53 @@
+# 注入知識 provenance KG の Competency Questions。
+# validate.validate_injection_kg が CQ 見出しごとに切り出し、inj: 込みの PREFIX を前置して実行する。
+# 共通 PREFIX (付与される): plu: / emo: / xsd: / inj: / prov:
+
+### CQ-I1: 特定予測に効いた知識ノードと寄与スコアを (予測単位で) 追跡できるか
+SELECT ?pred ?emotion ?node ?score WHERE {
+    ?pred a emo:EmotionSituation ;
+          plu:isManifestationOf ?emotion ;
+          inj:influencedBy ?i .
+    ?i inj:knowledgeNode ?node ;
+       inj:attributionScore ?score .
+} ORDER BY ?pred DESC(?score) LIMIT 12
+
+### CQ-I2: 各知識ノード (dyad) が影響を与えた予測の数
+SELECT ?node (COUNT(DISTINCT ?occ) AS ?n_predictions) WHERE {
+    ?occ inj:influencedBy ?i .
+    ?i inj:knowledgeNode ?node .
+} GROUP BY ?node ORDER BY DESC(?n_predictions)
+
+### CQ-I3: provenance 完全性 — influencedBy を欠く注入予測 (期待: 空)
+SELECT ?occ WHERE {
+    ?occ inj:derivedByMethod ?m .
+    FILTER NOT EXISTS { ?occ inj:influencedBy ?any }
+}
+
+### CQ-I4: 知識ノード別の平均寄与スコア (どの dyad 知識が予測に効くか)
+SELECT ?node (AVG(xsd:double(?score)) AS ?avg_score) (COUNT(?score) AS ?n) WHERE {
+    ?i inj:knowledgeNode ?node ;
+       inj:attributionScore ?score .
+} GROUP BY ?node ORDER BY DESC(?avg_score)
+
+### CQ-I5: 各知識ノードが何手法で支持されるか (手法横断 corroboration / 単一手法の産物でないか)
+SELECT ?node (COUNT(DISTINCT ?method) AS ?n_methods) WHERE {
+    ?i inj:knowledgeNode ?node ;
+       prov:wasGeneratedBy ?act .
+    ?act prov:wasAssociatedWith ?method .
+} GROUP BY ?node ORDER BY DESC(?n_methods)
+
+### CQ-I6: 予測単位で top-1 寄与ノードが手法間で一致するか (distinct_top1=1 なら全手法一致)
+SELECT ?pred (COUNT(DISTINCT ?topnode) AS ?distinct_top1) (COUNT(DISTINCT ?method) AS ?n_methods) WHERE {
+    ?pred inj:influencedBy ?i .
+    ?i inj:knowledgeNode ?topnode ;
+       inj:attributionScore ?s ;
+       prov:wasGeneratedBy ?act .
+    ?act prov:wasAssociatedWith ?method .
+    FILTER NOT EXISTS {
+        ?pred inj:influencedBy ?i2 .
+        ?i2 inj:attributionScore ?s2 ;
+            prov:wasGeneratedBy ?act2 .
+        ?act2 prov:wasAssociatedWith ?method .
+        FILTER ( ABS(?s2) > ABS(?s) )
+    }
+} GROUP BY ?pred ORDER BY DESC(?distinct_top1)

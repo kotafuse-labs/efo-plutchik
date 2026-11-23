@@ -1,0 +1,6 @@
+# EFO-Plutchik ontology package — 検証は完全ローカル・学習依存なし（torch 不要）。
+rdflib>=7.0
+pyshacl>=0.29
+owlrl>=7.1
+numpy>=1.24        # ontology/build_graph.py（理論グラフ → 隣接行列 JSON）のみで使用
+pytest>=8.0

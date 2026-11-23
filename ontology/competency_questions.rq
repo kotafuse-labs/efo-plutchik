@@ -1,0 +1,55 @@
+# EFO-Plutchik Competency Questions (設計仕様書 v0.4.0 §7.3, 決定10)。
+# validate.py が CQ 見出しごとに各クエリを切り出し、共通 PREFIX を前置して実行する。
+# 共通 PREFIX (validate.py が付与):
+#   plu: <https://w3id.org/efo-plutchik#>
+#   emo: <http://www.ontologydesignpatterns.org/ont/emotions/EmoCore.owl#>
+#   xsd: <http://www.w3.org/2001/XMLSchema#>
+
+### CQ-1: 任意の dyad 事例の構成要素 (基本感情と強度) を追跡できるか
+SELECT ?occ_dyad ?basic_occ ?basic_emotion ?intensity WHERE {
+    ?occ_dyad plu:derivedFrom ?basic_occ ;
+              plu:isManifestationOf ?dyad .
+    ?dyad a plu:PrimaryDyad .
+    ?basic_occ plu:isManifestationOf ?basic_emotion ;
+               plu:hasIntensityReading [ plu:value ?intensity ] .
+}
+
+### CQ-2: 特定規則 (Rule_DyadMin) による生成事例の総数
+SELECT (COUNT(?occ) AS ?count) WHERE {
+    ?occ plu:derivedByRule plu:Rule_DyadMin .
+}
+
+### CQ-3: dyad ごとの生成件数分布
+SELECT ?dyad (COUNT(?occ) AS ?count) WHERE {
+    ?occ plu:isManifestationOf ?dyad .
+    ?dyad a plu:PrimaryDyad .
+    ?occ plu:derivedFrom ?any .
+} GROUP BY ?dyad ORDER BY DESC(?count)
+
+### CQ-4: 特定 dyad (Love) の最大強度
+SELECT (MAX(?intensity) AS ?max_intensity) WHERE {
+    ?occ plu:isManifestationOf plu:Love ;
+         plu:hasIntensityReading [ plu:value ?intensity ] .
+}
+
+### CQ-5: 推論の逆方向追跡 — ある基本感情事例から派生した dyad
+SELECT ?basic_occ ?dyad_occ ?dyad WHERE {
+    ?dyad_occ plu:derivedFrom ?basic_occ ;
+              plu:isManifestationOf ?dyad .
+    ?dyad a plu:PrimaryDyad .
+}
+
+### CQ-6: 規則間 (閾値別) の比較 — 規則ごとの Love 生成数
+SELECT ?rule ?threshold (COUNT(?occ) AS ?love_count) WHERE {
+    ?occ plu:isManifestationOf plu:Love ;
+         plu:derivedByRule ?rule .
+    ?rule plu:thresholdParameter ?threshold .
+} GROUP BY ?rule ?threshold ORDER BY ?threshold
+
+### CQ-7: provenance 完全性 — derivedFrom を欠く dyad 事例 (期待: 空)
+SELECT ?occ WHERE {
+    ?occ a emo:EmotionSituation ;
+         plu:isManifestationOf ?dyad .
+    ?dyad a plu:PrimaryDyad .
+    FILTER NOT EXISTS { ?occ plu:derivedFrom ?src }
+}

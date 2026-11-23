@@ -1,0 +1,52 @@
+# EFO-Plutchik Dyad Minimum Aggregation — SPARQL CONSTRUCT 実装。
+# 設計仕様書 v0.4.0 §6.2/§6.3 (決定7) に忠実。validate.py が読み込み g.query → g.add する。
+#
+# 規則: 任意の dyad（v0.5.0 で primary / secondary / tertiary の 24 個）D=hasComponentEmotion(E1,E2) と、同一 sourceText を持つ
+#   E1/E2 の occurrence が両方 TH 以上のとき、dyad occurrence を materialize する。
+#   強度 = min(s1, s2)、derivedFrom で 2 基本 occ にリンク、derivedByRule で規則を記録。
+# aggregationFunction "min" かつ thresholdParameter を持つ DerivationRule（DyadMin, TH=0.5/0.3/0.7）で生成し、
+# 感度分析 (CQ-3/CQ-6) を可能にする。GeoMean / ArithMean / Product 規則は SPARQL で集約を計算しないので事例を作らない
+# （作ると derivedByRule の規則名と中身の計算が食い違う、CombineEFOMoE #15）。
+# occurrence IRI に規則ローカル名を含めて閾値間の衝突を防ぐ。
+
+PREFIX plu:  <https://w3id.org/efo-plutchik#>
+PREFIX emo:  <http://www.ontologydesignpatterns.org/ont/emotions/EmoCore.owl#>
+PREFIX owl:  <http://www.w3.org/2002/07/owl#>
+PREFIX rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX xsd:  <http://www.w3.org/2001/XMLSchema#>
+
+CONSTRUCT {
+    ?occ_dyad a owl:NamedIndividual , emo:EmotionSituation ;
+              plu:isManifestationOf ?dyad ;
+              plu:hasIntensityReading [
+                  a plu:IntensityReading ;
+                  plu:about ?dyad ;
+                  plu:value ?intensity ;
+                  plu:aggregationRule ?rule
+              ] ;
+              plu:derivedFrom ?occ1 , ?occ2 ;
+              plu:derivedByRule ?rule ;
+              plu:sourceText ?text .
+}
+WHERE {
+    VALUES ?dyadClass { plu:PrimaryDyad plu:SecondaryDyad plu:TertiaryDyad }   # v0.5.0: 24 dyad すべて
+    ?dyad a ?dyadClass ;
+          plu:hasComponentEmotion ?e1 , ?e2 .
+    FILTER (STR(?e1) < STR(?e2))          # component ペアを一意化 (順序固定)
+
+    ?rule a plu:DerivationRule ;
+          plu:aggregationFunction "min" ;   # min の規則だけ（他の集約は SPARQL で計算しない、CombineEFOMoE #15）
+          plu:thresholdParameter ?th .
+
+    ?occ1 plu:isManifestationOf ?e1 ;
+          plu:hasIntensityReading [ plu:value ?s1 ] ;
+          plu:sourceText ?text .
+    ?occ2 plu:isManifestationOf ?e2 ;
+          plu:hasIntensityReading [ plu:value ?s2 ] ;
+          plu:sourceText ?text .          # 同一テキスト文脈 (§6.3.2)
+
+    FILTER (?s1 >= ?th && ?s2 >= ?th)
+    BIND (IF(?s1 < ?s2, ?s1, ?s2) AS ?intensity)
+    BIND (STRAFTER(STR(?rule), "#") AS ?rulename)
+    BIND (IRI(CONCAT(STR(?occ1), "_", LCASE(STRAFTER(STR(?dyad), "#")), "_", ?rulename)) AS ?occ_dyad)
+}

@@ -1,0 +1,28 @@
+EFO-Plutchik ontology package
+==============================
+
+This repository contains two kinds of artifacts under two licenses.
+
+1. Ontology, SHACL shapes, SPARQL queries and documentation
+   (ontology/*.ttl, ontology/*.rq, docs/**, README.md)
+   Licensed under Creative Commons Attribution 4.0 International (CC BY 4.0).
+   Full text: LICENSES/CC-BY-4.0.txt
+   (https://creativecommons.org/licenses/by/4.0/legalcode)
+   This matches `dcterms:license <https://creativecommons.org/licenses/by/4.0/>`
+   declared inside ontology/efo-plutchik.ttl.
+
+2. Validation / build code (src/**, scripts/**, ontology/*.py, tests/**)
+   Licensed under the Apache License, Version 2.0.
+   Full text: LICENSES/Apache-2.0.txt
+   (https://www.apache.org/licenses/LICENSE-2.0)
+
+Third-party files: the Emotion Frame Ontology (EFO) by De Giorgis &
+Gangemi (https://github.com/StenDoipanni/EFO) is NOT distributed with this
+repository. The upstream repository declares no license (checked
+2026-11-15), so permission to redistribute is not granted. For the EFO
+alignment check, src/provenance/validate.py downloads EmoCore_iswc.ttl and
+BE_iswc.ttl from a pinned upstream commit into ontology/efo-src/ (ignored by
+git) and verifies their SHA-256. These files are not covered by either
+license above.
+
+Attribution: Kota Fuse.
