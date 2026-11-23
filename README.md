@@ -82,7 +82,8 @@ releases/0.4.0/             the previous release of the ontology (owl:priorVersi
 tests/                      pure-RDF tests (EFO alignment, docs, theory graph, mappings)
 docs/                       reference page (GitHub Pages), served Turtle files by version,
                             construction notes, modeling decisions
-w3id/                       the redirect rules registered at w3id.org
+w3id/                       redirect rules prepared for w3id.org (not registered yet; the namespace IRI
+                            does not resolve — use the documentation URL above)
 ```
 
 ## Related work
