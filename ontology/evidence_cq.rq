@@ -1,0 +1,36 @@
+# 転移の証拠の CQ（証拠のモジュール 0.1.0）。写像のモジュールと合わせたグラフに対して実行する。
+# 行の見出しの記号を、この説明の中に書かない（分割に使う）。
+
+### CQ-T1: 語ごとの要約 — 証拠の数、matched の平均、名前の合うラベルが最良のほかのラベルを上回る組の数、判定の内訳
+SELECT ?term (COUNT(?e) AS ?n) (AVG(xsd:double(?m)) AS ?matched) (SUM(IF(?m > ?b, 1, 0)) AS ?beatsBestOther)
+       (SUM(IF(?v = evd:Supported, 1, 0)) AS ?supported) (SUM(IF(?v = evd:Partial, 1, 0)) AS ?partial) (SUM(IF(?v = evd:NotSupported, 1, 0)) AS ?notSupported)
+WHERE {
+    ?e a evd:TransferEvidence ; evd:sourceMapping ?s ; evd:matchedAuc ?m ; evd:bestOtherAuc ?b ; evd:preregisteredVerdict ?v .
+    ?s map:mapsTo ?term .
+} GROUP BY ?term ORDER BY ?term
+
+### CQ-T2: 学習側で、どの相手に対しても Supported が無い対応（証拠が 2 つ以上あるもの）
+SELECT ?dataset ?label ?term (COUNT(?e) AS ?n) (SUM(IF(?v = evd:Partial, 1, 0)) AS ?partial) (AVG(xsd:double(?m)) AS ?matched)
+WHERE {
+    ?e a evd:TransferEvidence ; evd:sourceMapping ?s ; evd:matchedAuc ?m ; evd:preregisteredVerdict ?v .
+    ?s map:dataset ?dataset ; map:sourceLabel ?label ; map:mapsTo ?term .
+} GROUP BY ?dataset ?label ?term HAVING (SUM(IF(?v = evd:Supported, 1, 0)) = 0 && COUNT(?e) >= 2) ORDER BY ?dataset ?label
+
+### CQ-T3: 評価側で、どの相手からも Supported が無い対応（証拠が 2 つ以上あるもの）
+SELECT ?dataset ?label ?term (COUNT(?e) AS ?n) (SUM(IF(?v = evd:Partial, 1, 0)) AS ?partial) (AVG(xsd:double(?m)) AS ?matched) (AVG(xsd:double(?nat)) AS ?native)
+WHERE {
+    ?e a evd:TransferEvidence ; evd:targetMapping ?t ; evd:matchedAuc ?m ; evd:nativeAuc ?nat ; evd:preregisteredVerdict ?v .
+    ?t map:dataset ?dataset ; map:sourceLabel ?label ; map:mapsTo ?term .
+} GROUP BY ?dataset ?label ?term HAVING (SUM(IF(?v = evd:Supported, 1, 0)) = 0 && COUNT(?e) >= 2) ORDER BY ?dataset ?label
+
+### CQ-T4: 証拠の無い対応 — 名前による対応（closeMatch）のうち、学習側としても評価側としても証拠が 1 つも無いもの
+SELECT ?dataset ?label ?term WHERE {
+    ?r a map:ConceptMapping ; map:inScheme map:Plutchik2001Names ; map:matchType skos:closeMatch ; map:dataset ?dataset ; map:sourceLabel ?label ; map:mapsTo ?term .
+    FILTER NOT EXISTS { ?e a evd:TransferEvidence ; evd:sourceMapping|evd:targetMapping ?r }
+} ORDER BY ?dataset ?label
+
+### CQ-T5: 判定だけでは読み違える組 — Partial か Supported なのに matched が 0.6 未満、または名前の合うラベルが最良のほかのラベルを 0.05 以上下回る
+SELECT ?e ?m ?b ?v WHERE {
+    ?e a evd:TransferEvidence ; evd:matchedAuc ?m ; evd:bestOtherAuc ?b ; evd:preregisteredVerdict ?v .
+    FILTER (?v != evd:NotSupported && (?m < 0.6 || ?b - ?m >= 0.05))
+} ORDER BY ?m

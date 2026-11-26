@@ -469,6 +469,49 @@ def run_mapping_cqs(graph=None, verbose=True):
     return out
 
 
+# ====== 転移の証拠（証拠のモジュール 0.1.1、CombineEFOMoE #88 → #90）======
+
+EVD_PREFIXES = MAP_PREFIXES + "PREFIX evd: <https://w3id.org/efo-plutchik/mapping/evidence#>\n"
+
+
+def _evidence_graph():
+    g = _mapping_graph()
+    g.parse(os.path.join(ONT, "plutchik-mapping-evidence.ttl"), format="turtle")
+    return g
+
+
+def validate_transfer_evidence(graph=None, verbose=True):
+    """転移の証拠を evidence_shapes.ttl で検証する（conforms が必須）。証拠は、写像のモジュールと合わせたグラフで見る。"""
+    from pyshacl import validate
+
+    g = _evidence_graph() if graph is None else graph
+    shapes = Graph()
+    shapes.parse(os.path.join(ONT, "evidence_shapes.ttl"), format="turtle")
+    conforms, _, text = validate(g, shacl_graph=shapes, inference="none", advanced=True)
+    if verbose:
+        print(f"[evidence-SHACL] conforms = {conforms}")
+        if not conforms:
+            print(text[:3000])
+    return conforms
+
+
+def run_evidence_cqs(graph=None, verbose=True):
+    """転移の証拠の CQ (evidence_cq.rq の CQ-T1〜T5) を回し、{見出し: 行のリスト} を返す。どれも一覧で、空が期待値のものは無い。"""
+    g = _evidence_graph() if graph is None else graph
+    with open(os.path.join(ONT, "evidence_cq.rq"), encoding="utf-8") as f:
+        content = f.read()
+    out = {}
+    for block in content.split("### "):
+        if not block.startswith("CQ-"):
+            continue
+        title, _, body = block.partition("\n")
+        rows = [tuple(None if x is None else str(x) for x in row) for row in g.query(EVD_PREFIXES + body)]
+        out[title.split(":")[0].strip()] = rows
+        if verbose:
+            print(f"[{title.strip()[:60]}] {len(rows)} row(s)")
+    return out
+
+
 def main():
     print("=== 理論グラフ自己検証 (Tier2 ④⑤) ===")
     validate_theory_graph()
@@ -484,6 +527,9 @@ def main():
     validate_mappings()
     audit_mappings()
     run_mapping_cqs()
+    print("\n=== 転移の証拠 (証拠のモジュール 0.1.1) ===")
+    validate_transfer_evidence()
+    run_evidence_cqs()
     print("\n=== 修論パイプライン (推論→SHACL→CQ) ===")
     g = load_kg()
     print(f"[load]   {len(g)} triples (TBox + sample occurrences)")

@@ -1,0 +1,66 @@
+@prefix sh:   <http://www.w3.org/ns/shacl#> .
+@prefix evd:  <https://w3id.org/efo-plutchik/mapping/evidence#> .
+@prefix map:  <https://w3id.org/efo-plutchik/mapping#> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+
+# 転移の証拠（plutchik-mapping-evidence.ttl）の制約。写像のモジュールと合わせたグラフに対して検証する。
+
+evd:TransferEvidenceShape a sh:NodeShape ;
+    sh:targetClass evd:TransferEvidence ;
+    # 型を持たないノードも対象にする（証拠の述語を 1 つでも持てば、証拠として検査する）。
+    sh:targetSubjectsOf evd:sourceMapping , evd:targetMapping , evd:matchedAuc , evd:bestOtherAuc , evd:preregisteredVerdict , evd:fromStudy ;
+    sh:class evd:TransferEvidence ;
+    sh:property [ sh:path evd:fromStudy ; sh:minCount 1 ; sh:maxCount 1 ; sh:class evd:EvidenceStudy ] ;
+    sh:property [ sh:path evd:sourceMapping ; sh:minCount 1 ; sh:maxCount 1 ; sh:class map:ConceptMapping ] ;
+    sh:property [ sh:path evd:targetMapping ; sh:minCount 1 ; sh:maxCount 1 ; sh:class map:ConceptMapping ] ;
+    sh:property [ sh:path evd:matchedAuc ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:decimal ; sh:minInclusive 0 ; sh:maxInclusive 1 ] ;
+    sh:property [ sh:path evd:bestOtherAuc ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:decimal ; sh:minInclusive 0 ; sh:maxInclusive 1 ] ;
+    sh:property [ sh:path evd:nativeAuc ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:decimal ; sh:minInclusive 0 ; sh:maxInclusive 1 ] ;
+    sh:property [ sh:path evd:seedCount ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 5 ; sh:maxInclusive 5 ;
+                  sh:message "The pre-registered verdict is defined for five seeds only."@en ] ;
+    sh:property [ sh:path evd:rankOneSeeds ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 0 ; sh:lessThanOrEquals evd:rankThreeSeeds ] ;
+    sh:property [ sh:path evd:rankThreeSeeds ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 0 ; sh:lessThanOrEquals evd:seedCount ] ;
+    sh:property [ sh:path evd:sourceLabelCount ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 2 ] ;
+    sh:property [ sh:path evd:targetPositives ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 20 ; sh:lessThan evd:targetRows ] ;
+    sh:property [ sh:path evd:targetRows ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:integer ] ;
+    sh:property [ sh:path evd:nativePositives ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 1 ] ;
+    sh:property [ sh:path evd:preregisteredVerdict ; sh:minCount 1 ; sh:maxCount 1 ; sh:in ( evd:Supported evd:Partial evd:NotSupported ) ] ;
+    sh:sparql [
+        sh:message "The two mapping records of a transfer evidence must be name-based close matches to the same Plutchik term, from two different datasets."@en ;
+        sh:select """
+            PREFIX evd: <https://w3id.org/efo-plutchik/mapping/evidence#>
+            PREFIX map: <https://w3id.org/efo-plutchik/mapping#>
+            PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+            SELECT $this WHERE {
+                $this evd:sourceMapping ?s ; evd:targetMapping ?t .
+                OPTIONAL { ?s map:mapsTo ?ts ; map:dataset ?ds } OPTIONAL { ?t map:mapsTo ?tt ; map:dataset ?dt }
+                FILTER ( !BOUND(?ts) || !BOUND(?tt) || ?ts != ?tt || ?ds = ?dt
+                      || NOT EXISTS { ?s map:inScheme map:Plutchik2001Names ; map:matchType skos:closeMatch }
+                      || NOT EXISTS { ?t map:inScheme map:Plutchik2001Names ; map:matchType skos:closeMatch } )
+            }""" ] ;
+    sh:sparql [
+        sh:message "The pre-registered verdict must follow from the seed counts (Supported: rank one in at least 4 of 5 seeds; Partial: rank three in at least 4 of 5; otherwise NotSupported)."@en ;
+        sh:select """
+            PREFIX evd: <https://w3id.org/efo-plutchik/mapping/evidence#>
+            SELECT $this WHERE {
+                $this evd:rankOneSeeds ?r1 ; evd:rankThreeSeeds ?r3 ; evd:seedCount ?n ; evd:preregisteredVerdict ?v .
+                BIND (4 AS ?need)
+                BIND (IF(?r1 >= ?need, evd:Supported, IF(?r3 >= ?need, evd:Partial, evd:NotSupported)) AS ?want)
+                FILTER (?v != ?want)
+            }""" ] ;
+    sh:sparql [
+        sh:message "There must be at most one transfer evidence per study and ordered pair of mapping records."@en ;
+        sh:select """
+            PREFIX evd: <https://w3id.org/efo-plutchik/mapping/evidence#>
+            SELECT $this WHERE {
+                $this evd:sourceMapping ?s ; evd:targetMapping ?t ; evd:fromStudy ?st .
+                ?other evd:sourceMapping ?s ; evd:targetMapping ?t ; evd:fromStudy ?st . FILTER (?other != $this)
+            }""" ] .
+
+evd:EvidenceStudyShape a sh:NodeShape ;
+    sh:targetClass evd:EvidenceStudy ;
+    sh:property [ sh:path <http://purl.org/dc/terms/description> ; sh:minCount 1 ; sh:minLength 20 ] ;
+    sh:property [ sh:path <http://purl.org/dc/terms/source> ; sh:minCount 1 ] ;
+    sh:property [ sh:path <http://purl.org/dc/terms/date> ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:date ] ;
+    sh:property [ sh:path skos:scopeNote ; sh:minCount 1 ; sh:minLength 20 ; sh:message "A study must state its limitations."@en ] .
