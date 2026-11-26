@@ -1,27 +1,27 @@
-# 転移の証拠の CQ（証拠のモジュール 0.1.0）。写像のモジュールと合わせたグラフに対して実行する。
+# 転移の証拠の CQ（証拠のモジュール 0.2.1）。調査が 2 つある。T1〜T3 と T5 は調査ごとに答える。T4 は 2 つの調査を合わせて「証拠が無い」を判定する。T6 は 2 つの調査を突き合わせる。写像のモジュールと合わせたグラフに対して実行する。
 # 行の見出しの記号を、この説明の中に書かない（分割に使う）。
 
 ### CQ-T1: 語ごとの要約 — 証拠の数、matched の平均、名前の合うラベルが最良のほかのラベルを上回る組の数、判定の内訳
-SELECT ?term (COUNT(?e) AS ?n) (AVG(xsd:double(?m)) AS ?matched) (SUM(IF(?m > ?b, 1, 0)) AS ?beatsBestOther)
-       (SUM(IF(?v = evd:Supported, 1, 0)) AS ?supported) (SUM(IF(?v = evd:Partial, 1, 0)) AS ?partial) (SUM(IF(?v = evd:NotSupported, 1, 0)) AS ?notSupported)
+SELECT ?study ?term (COUNT(?e) AS ?n) (AVG(xsd:double(?m)) AS ?matched) (SUM(IF(?m > ?b, 1, 0)) AS ?beatsBestOther)
+       (SUM(IF(?v = evd:Supported, 1, 0)) AS ?supported) (SUM(IF(?v = evd:Partial, 1, 0)) AS ?partial) (SUM(IF(?v = evd:NotSupported, 1, 0)) AS ?notSupported) (SUM(IF(?v = evd:Mixed, 1, 0)) AS ?mixed) (SUM(IF(?v = evd:Inconclusive, 1, 0)) AS ?inconclusive)
 WHERE {
-    ?e a evd:TransferEvidence ; evd:sourceMapping ?s ; evd:matchedAuc ?m ; evd:bestOtherAuc ?b ; evd:preregisteredVerdict ?v .
+    ?e a evd:TransferEvidence ; evd:fromStudy ?study ; evd:sourceMapping ?s ; evd:matchedAuc ?m ; evd:bestOtherAuc ?b ; evd:preregisteredVerdict ?v .
     ?s map:mapsTo ?term .
-} GROUP BY ?term ORDER BY ?term
+} GROUP BY ?study ?term ORDER BY ?study ?term
 
 ### CQ-T2: 学習側で、どの相手に対しても Supported が無い対応（証拠が 2 つ以上あるもの）
-SELECT ?dataset ?label ?term (COUNT(?e) AS ?n) (SUM(IF(?v = evd:Partial, 1, 0)) AS ?partial) (AVG(xsd:double(?m)) AS ?matched)
+SELECT ?study ?dataset ?label ?term (COUNT(?e) AS ?n) (SUM(IF(?v IN (evd:Partial, evd:Mixed), 1, 0)) AS ?partialOrMixed) (AVG(xsd:double(?m)) AS ?matched)
 WHERE {
-    ?e a evd:TransferEvidence ; evd:sourceMapping ?s ; evd:matchedAuc ?m ; evd:preregisteredVerdict ?v .
+    ?e a evd:TransferEvidence ; evd:fromStudy ?study ; evd:sourceMapping ?s ; evd:matchedAuc ?m ; evd:preregisteredVerdict ?v .
     ?s map:dataset ?dataset ; map:sourceLabel ?label ; map:mapsTo ?term .
-} GROUP BY ?dataset ?label ?term HAVING (SUM(IF(?v = evd:Supported, 1, 0)) = 0 && COUNT(?e) >= 2) ORDER BY ?dataset ?label
+} GROUP BY ?study ?dataset ?label ?term HAVING (SUM(IF(?v = evd:Supported, 1, 0)) = 0 && COUNT(?e) >= 2) ORDER BY ?study ?dataset ?label
 
 ### CQ-T3: 評価側で、どの相手からも Supported が無い対応（証拠が 2 つ以上あるもの）
-SELECT ?dataset ?label ?term (COUNT(?e) AS ?n) (SUM(IF(?v = evd:Partial, 1, 0)) AS ?partial) (AVG(xsd:double(?m)) AS ?matched) (AVG(xsd:double(?nat)) AS ?native)
+SELECT ?study ?dataset ?label ?term (COUNT(?e) AS ?n) (SUM(IF(?v IN (evd:Partial, evd:Mixed), 1, 0)) AS ?partialOrMixed) (AVG(xsd:double(?m)) AS ?matched) (AVG(xsd:double(?nat)) AS ?native)
 WHERE {
-    ?e a evd:TransferEvidence ; evd:targetMapping ?t ; evd:matchedAuc ?m ; evd:nativeAuc ?nat ; evd:preregisteredVerdict ?v .
+    ?e a evd:TransferEvidence ; evd:fromStudy ?study ; evd:targetMapping ?t ; evd:matchedAuc ?m ; evd:nativeAuc ?nat ; evd:preregisteredVerdict ?v .
     ?t map:dataset ?dataset ; map:sourceLabel ?label ; map:mapsTo ?term .
-} GROUP BY ?dataset ?label ?term HAVING (SUM(IF(?v = evd:Supported, 1, 0)) = 0 && COUNT(?e) >= 2) ORDER BY ?dataset ?label
+} GROUP BY ?study ?dataset ?label ?term HAVING (SUM(IF(?v = evd:Supported, 1, 0)) = 0 && COUNT(?e) >= 2) ORDER BY ?study ?dataset ?label
 
 ### CQ-T4: 証拠の無い対応 — 名前による対応（closeMatch）のうち、学習側としても評価側としても証拠が 1 つも無いもの
 SELECT ?dataset ?label ?term WHERE {
@@ -29,8 +29,15 @@ SELECT ?dataset ?label ?term WHERE {
     FILTER NOT EXISTS { ?e a evd:TransferEvidence ; evd:sourceMapping|evd:targetMapping ?r }
 } ORDER BY ?dataset ?label
 
-### CQ-T5: 判定だけでは読み違える組 — Partial か Supported なのに matched が 0.6 未満、または名前の合うラベルが最良のほかのラベルを 0.05 以上下回る
-SELECT ?e ?m ?b ?v WHERE {
-    ?e a evd:TransferEvidence ; evd:matchedAuc ?m ; evd:bestOtherAuc ?b ; evd:preregisteredVerdict ?v .
-    FILTER (?v != evd:NotSupported && (?m < 0.6 || ?b - ?m >= 0.05))
-} ORDER BY ?m
+### CQ-T5: 判定だけでは読み違える組 — NotSupported でないのに matched が 0.6 未満か、名前の合うラベルが最良のほかのラベルを 0.05 以上下回る組。および、NotSupported なのに matched が 0.8 以上の組（水準は高いが、近いラベルに負けた）
+SELECT ?study ?e ?m ?b ?v WHERE {
+    ?e a evd:TransferEvidence ; evd:fromStudy ?study ; evd:matchedAuc ?m ; evd:bestOtherAuc ?b ; evd:preregisteredVerdict ?v .
+    FILTER ( (?v IN (evd:Supported, evd:Partial, evd:Mixed) && (?m < 0.6 || ?b - ?m >= 0.05)) || (?v = evd:NotSupported && ?m >= 0.8) )
+} ORDER BY ?study ?m
+
+### CQ-T6: 2 つの調査で判定が食い違う組 — 最初の調査で Supported でなく、再実行で Supported になった組と、その逆（学習の陽性の数つき）。両方の調査にある 529 組だけを見る（再実行だけにある 3 組は出ない）
+SELECT ?s ?t ?v1 ?v2 ?tp WHERE {
+    ?e1 a evd:TransferEvidence ; evd:fromStudy evd:CrossDatasetTransfer2026 ; evd:sourceMapping ?s ; evd:targetMapping ?t ; evd:preregisteredVerdict ?v1 .
+    ?e2 a evd:TransferEvidence ; evd:fromStudy evd:CrossDatasetTransfer2026b ; evd:sourceMapping ?s ; evd:targetMapping ?t ; evd:preregisteredVerdict ?v2 ; evd:sourceTrainingPositives ?tp .
+    FILTER ((?v1 = evd:Supported) != (?v2 = evd:Supported))
+} ORDER BY ?s ?t

@@ -9,9 +9,9 @@ abstract: >-
   vocabulary for valence/arousal/dominance readings, English and Japanese
   labels. The mapping module (0.6.1) maps the labels of 12 emotion datasets
   to the theory under documented schemes and records how each dataset's
-  labels were assigned. The evidence module (0.1.1) records, for 529 pairs of
-  name-matched labels from 10 datasets, how well a classifier trained on one
-  dataset separates the other dataset's label. It includes derivation rules for inferring
+  labels were assigned. The evidence module (0.2.1) records, for pairs of name-matched labels from
+  10 datasets, how well a classifier trained on one dataset separates the
+  other dataset's label (two studies: 529 and 532 pairs). It includes derivation rules for inferring
   compound-emotion occurrences from intensity readings and a machine-checkable
   validation layer (SHACL shapes, SPARQL competency questions, OWL-RL
   consistency).
@@ -20,7 +20,7 @@ type: dataset
 authors:
   - family-names: "Fuse"
     given-names: "Kota"
-version: "0.7.1"
+version: "0.8.1"
 license: "CC-BY-4.0"
 keywords:
   - ontology

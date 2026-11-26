@@ -469,7 +469,7 @@ def run_mapping_cqs(graph=None, verbose=True):
     return out
 
 
-# ====== 転移の証拠（証拠のモジュール 0.1.1、CombineEFOMoE #88 → #90）======
+# ====== 転移の証拠（証拠のモジュール 0.2.1、CombineEFOMoE #88 → #90、#91 → #92）======
 
 EVD_PREFIXES = MAP_PREFIXES + "PREFIX evd: <https://w3id.org/efo-plutchik/mapping/evidence#>\n"
 
@@ -496,7 +496,7 @@ def validate_transfer_evidence(graph=None, verbose=True):
 
 
 def run_evidence_cqs(graph=None, verbose=True):
-    """転移の証拠の CQ (evidence_cq.rq の CQ-T1〜T5) を回し、{見出し: 行のリスト} を返す。どれも一覧で、空が期待値のものは無い。"""
+    """転移の証拠の CQ (evidence_cq.rq の CQ-T1〜T6) を回し、{見出し: 行のリスト} を返す。どれも一覧で、空が期待値のものは無い。"""
     g = _evidence_graph() if graph is None else graph
     with open(os.path.join(ONT, "evidence_cq.rq"), encoding="utf-8") as f:
         content = f.read()
@@ -527,7 +527,7 @@ def main():
     validate_mappings()
     audit_mappings()
     run_mapping_cqs()
-    print("\n=== 転移の証拠 (証拠のモジュール 0.1.1) ===")
+    print("\n=== 転移の証拠 (証拠のモジュール 0.2.1) ===")
     validate_transfer_evidence()
     run_evidence_cqs()
     print("\n=== 修論パイプライン (推論→SHACL→CQ) ===")

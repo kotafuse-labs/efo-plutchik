@@ -9,7 +9,8 @@
 evd:TransferEvidenceShape a sh:NodeShape ;
     sh:targetClass evd:TransferEvidence ;
     # 型を持たないノードも対象にする（証拠の述語を 1 つでも持てば、証拠として検査する）。
-    sh:targetSubjectsOf evd:sourceMapping , evd:targetMapping , evd:matchedAuc , evd:bestOtherAuc , evd:preregisteredVerdict , evd:fromStudy ;
+    sh:targetSubjectsOf evd:sourceMapping , evd:targetMapping , evd:matchedAuc , evd:bestOtherAuc , evd:preregisteredVerdict , evd:fromStudy ,
+        evd:nativeAuc , evd:rankOneSeeds , evd:rankThreeSeeds , evd:seedCount , evd:sourceLabelCount , evd:targetPositives , evd:targetRows , evd:nativePositives , evd:sourceTrainingPositives ;
     sh:class evd:TransferEvidence ;
     sh:property [ sh:path evd:fromStudy ; sh:minCount 1 ; sh:maxCount 1 ; sh:class evd:EvidenceStudy ] ;
     sh:property [ sh:path evd:sourceMapping ; sh:minCount 1 ; sh:maxCount 1 ; sh:class map:ConceptMapping ] ;
@@ -20,12 +21,13 @@ evd:TransferEvidenceShape a sh:NodeShape ;
     sh:property [ sh:path evd:seedCount ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 5 ; sh:maxInclusive 5 ;
                   sh:message "The pre-registered verdict is defined for five seeds only."@en ] ;
     sh:property [ sh:path evd:rankOneSeeds ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 0 ; sh:lessThanOrEquals evd:rankThreeSeeds ] ;
-    sh:property [ sh:path evd:rankThreeSeeds ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 0 ; sh:lessThanOrEquals evd:seedCount ] ;
+    sh:property [ sh:path evd:rankThreeSeeds ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 0 ; sh:lessThanOrEquals evd:seedCount ] ;
     sh:property [ sh:path evd:sourceLabelCount ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 2 ] ;
     sh:property [ sh:path evd:targetPositives ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 20 ; sh:lessThan evd:targetRows ] ;
-    sh:property [ sh:path evd:targetRows ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:integer ] ;
+    sh:property [ sh:path evd:targetRows ; sh:maxCount 1 ; sh:datatype xsd:integer ] ;
+    sh:property [ sh:path evd:sourceTrainingPositives ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 1 ] ;
     sh:property [ sh:path evd:nativePositives ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 1 ] ;
-    sh:property [ sh:path evd:preregisteredVerdict ; sh:minCount 1 ; sh:maxCount 1 ; sh:in ( evd:Supported evd:Partial evd:NotSupported ) ] ;
+    sh:property [ sh:path evd:preregisteredVerdict ; sh:minCount 1 ; sh:maxCount 1 ; sh:in ( evd:Supported evd:Partial evd:NotSupported evd:Mixed evd:Inconclusive ) ] ;
     sh:sparql [
         sh:message "The two mapping records of a transfer evidence must be name-based close matches to the same Plutchik term, from two different datasets."@en ;
         sh:select """
@@ -40,15 +42,30 @@ evd:TransferEvidenceShape a sh:NodeShape ;
                       || NOT EXISTS { ?t map:inScheme map:Plutchik2001Names ; map:matchType skos:closeMatch } )
             }""" ] ;
     sh:sparql [
-        sh:message "The pre-registered verdict must follow from the seed counts (Supported: rank one in at least 4 of 5 seeds; Partial: rank three in at least 4 of 5; otherwise NotSupported)."@en ;
+        sh:message "Study CrossDatasetTransfer2026: the verdict must follow from the seed counts (Supported: rank one in at least 4 of 5 seeds; Partial: rank three in at least 4 of 5; otherwise NotSupported), and rank-three seeds and target rows must be given."@en ;
         sh:select """
             PREFIX evd: <https://w3id.org/efo-plutchik/mapping/evidence#>
             SELECT $this WHERE {
-                $this evd:rankOneSeeds ?r1 ; evd:rankThreeSeeds ?r3 ; evd:seedCount ?n ; evd:preregisteredVerdict ?v .
-                BIND (4 AS ?need)
-                BIND (IF(?r1 >= ?need, evd:Supported, IF(?r3 >= ?need, evd:Partial, evd:NotSupported)) AS ?want)
-                FILTER (?v != ?want)
+                $this evd:fromStudy evd:CrossDatasetTransfer2026 ; evd:rankOneSeeds ?r1 ; evd:preregisteredVerdict ?v .
+                OPTIONAL { $this evd:rankThreeSeeds ?r3 } OPTIONAL { $this evd:targetRows ?rows }
+                BIND (IF(?r1 >= 4, evd:Supported, IF(BOUND(?r3) && ?r3 >= 4, evd:Partial, evd:NotSupported)) AS ?want)
+                FILTER (!BOUND(?r3) || !BOUND(?rows) || ?v != ?want)
             }""" ] ;
+    sh:sparql [
+        sh:message "Study CrossDatasetTransfer2026b: the verdict must follow from the recorded numbers (Inconclusive: fewer than 50 source training positives; else Supported: rank one in at least 4 of 5 seeds and matched AUC at least 0.6; else NotSupported: matched AUC not above the best other AUC; else Mixed), and the source training positives must be given."@en ;
+        sh:select """
+            PREFIX evd: <https://w3id.org/efo-plutchik/mapping/evidence#>
+            SELECT $this WHERE {
+                $this evd:fromStudy evd:CrossDatasetTransfer2026b ; evd:rankOneSeeds ?r1 ; evd:matchedAuc ?m ; evd:bestOtherAuc ?b ; evd:preregisteredVerdict ?v .
+                OPTIONAL { $this evd:sourceTrainingPositives ?tp }
+                BIND (IF(BOUND(?tp) && ?tp < 50, evd:Inconclusive, IF(?r1 >= 4 && ?m >= 0.6, evd:Supported, IF(?m <= ?b, evd:NotSupported, evd:Mixed))) AS ?want)
+                FILTER (!BOUND(?tp) || ?v != ?want)
+            }""" ] ;
+    sh:sparql [
+        sh:message "A transfer evidence must come from a study whose verdict rule is known to these shapes."@en ;
+        sh:select """
+            PREFIX evd: <https://w3id.org/efo-plutchik/mapping/evidence#>
+            SELECT $this WHERE { $this evd:fromStudy ?st . FILTER (?st NOT IN (evd:CrossDatasetTransfer2026, evd:CrossDatasetTransfer2026b)) }""" ] ;
     sh:sparql [
         sh:message "There must be at most one transfer evidence per study and ordered pair of mapping records."@en ;
         sh:select """

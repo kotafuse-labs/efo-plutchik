@@ -1,0 +1,22 @@
+{
+ "experiment": "CombineEFOMoE issue #91",
+ "mapping_module_version": "0.6.1",
+ "seeds": [
+  47,
+  48,
+  49,
+  50,
+  51
+ ],
+ "n_pairs": 532,
+ "auc_decimals": 6,
+ "inputs": {
+  "crossdata_transfer_v2.json": "6f9951e442926f9484548ccd0a476df8c604c6af884f90ef61332db7e48372ac"
+ },
+ "scripts": {
+  "scripts/train_crossdata_transfer_v2.py": "fc8dc8591e389600ee52cff3e36ae00d57e42de57e1ef7dc1535bf407d9c9737",
+  "scripts/eval_crossdata_transfer_v2.py": "1d4a220a26228dee4db60e599a126a4c5220aaa5034f2a7efcfc20238ea746a0",
+  "scripts/train_crossdata_transfer.py": "19a560217dbaa535e1451c07008b43a821e4c1a4728292a1865baa7bcb91526d",
+  "scripts/export_transfer_evidence_csv.py": "020422159ecb66e90e5a54f9695a1ecf538296b1d0c459354858ec18dcaf971b"
+ }
+}

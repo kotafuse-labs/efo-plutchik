@@ -1,4 +1,6 @@
-"""転移の証拠のモジュール 0.1.1 を生成する（CombineEFOMoE #88 → #90）。
+"""転移の証拠のモジュール 0.2.1 を生成する（CombineEFOMoE #88 → #90、#91 → #92）。
+
+調査は 2 つ。CrossDatasetTransfer2026（#88）と、その再実行 CrossDatasetTransfer2026b（#91。新しい seed、まれなラベルの陽性を学習に残す、判定の規則を直す）。
 
 入力: ontology/evidence/crossdata_transfer_2026-11.csv（CombineEFOMoE #88 の結果。数値だけで、データセットの文は含まない。AUC は小数 6 桁）と、
       同じ場所の .source.json（もとの json とスクリプトの sha256。CombineEFOMoE の scripts/export_transfer_evidence_csv.py が両方を書く）。
@@ -25,14 +27,16 @@ PLU = Namespace("https://w3id.org/efo-plutchik#")
 MAP = Namespace("https://w3id.org/efo-plutchik/mapping#")
 EVD = Namespace("https://w3id.org/efo-plutchik/mapping/evidence#")
 ONTO = URIRef("https://w3id.org/efo-plutchik/mapping/evidence")
-VERSION = "0.1.1"
+VERSION = "0.2.1"
 SOURCE = os.path.join(HERE, "evidence", "crossdata_transfer_2026-11.source.json")
-VERDICTS = {"supported": "Supported", "partial": "Partial", "not_supported": "NotSupported"}
+CSV_B = os.path.join(HERE, "evidence", "crossdata_transfer_2026-11b.csv")
+SOURCE_B = os.path.join(HERE, "evidence", "crossdata_transfer_2026-11b.source.json")
+VERDICTS = {"supported": "Supported", "partial": "Partial", "not_supported": "NotSupported", "mixed": "Mixed", "inconclusive": "Inconclusive"}
 
 CLASSES = {
     "EvidenceStudy": ("Evidence study", "証拠の調査", "An experiment that produced transfer evidence, with its setting and known limitations."),
     "TransferEvidence": ("Transfer evidence", "転移の証拠", "For two mapping records that map labels of two different datasets to the same Plutchik term: how well a classifier trained on the source dataset's label separates the target dataset's label. It is evidence about one experimental setting, not a judgement that the mapping is right or wrong."),
-    "Verdict": ("Pre-registered verdict", "事前登録の判定", "The per-pair verdict defined in the study's pre-registration."),
+    "Verdict": ("Pre-registered verdict", "事前登録の判定", "The per-pair verdict defined in the study's pre-registration. The rule differs between studies; see evd:preregisteredVerdict and the study's description."),
 }
 PROPS = {  # 名前: (label, 型, range, 定義)
     "fromStudy": ("from study", "object", EVD.EvidenceStudy, "The study that produced the evidence."),
@@ -48,18 +52,30 @@ PROPS = {  # 名前: (label, 型, range, 定義)
     "targetRows": ("target rows", "data", XSD.integer, "Number of evaluation rows."),
     "nativeAuc": ("native AUC", "data", XSD.decimal, "ROC-AUC of the target dataset's own model for the target label on its test split, averaged over seeds."),
     "nativePositives": ("native positives", "data", XSD.integer, "Number of positive rows of the target label in the target dataset's test split. Below 20 the native AUC is unstable."),
-    "preregisteredVerdict": ("pre-registered verdict", "object", EVD.Verdict, "Defined for five seeds. Supported: rank one in at least 4 of 5 seeds. Partial: within rank three in at least 4 of 5 seeds. NotSupported: otherwise. The rule has no absolute floor on the AUC."),
+    "sourceTrainingPositives": ("source training positives", "data", XSD.integer, "Number of positive training rows of the source label (the minimum over seeds). Recorded from study CrossDatasetTransfer2026b on; the first study did not record it."),
+    "preregisteredVerdict": ("pre-registered verdict", "object", EVD.Verdict, "Study CrossDatasetTransfer2026b: Inconclusive if the source label had fewer than 50 training positives; otherwise Supported if rank one in at least 4 of 5 seeds and the matched AUC is at least 0.6; otherwise NotSupported if the matched AUC does not exceed the best other AUC; otherwise Mixed. Study CrossDatasetTransfer2026: defined for five seeds. Supported: rank one in at least 4 of 5 seeds. Partial: within rank three in at least 4 of 5 seeds. NotSupported: otherwise. The rule has no absolute floor on the AUC."),
 }
 STUDY_LIMITS = (
     "One model (roberta-base), one training setting (at most 8,000 training rows, no model selection on validation data), five seeds, English only.",
     "Transfer does not show that two labels denote the same concept, and a lack of transfer does not show that they differ: granularity, label frequency, text type and the number of training positives also change the result.",
     "Datasets with many closely related labels (for example 28 or 32) lose rank to those neighbours; this is an effect of granularity.",
-    "Rare labels had about 20 training positives or fewer after sampling (for example GoEmotions 'pride', DailyDialog 'fear'); pairs with these as the source are inconclusive.",
+    "Rare labels had about 20 training positives or fewer after sampling (for example GoEmotions 'pride', DailyDialog 'fear'); for pairs with these as the source this study cannot tell whether the label fails to transfer or the training sample was too small (their verdicts remain NotSupported or Partial as pre-registered).",
     "The verdict rule has no absolute floor: some pairs with a matched AUC below 0.6 are Partial. Compare matchedAuc with bestOtherAuc instead of relying on the verdict alone.",
     "Within rank three is easy to reach by chance when the source model has few labels (probability 0.60 with 5 labels); see sourceLabelCount.",
     "The highest values are for pairs in which both datasets were labelled by the writer; all of these datasets consist of event descriptions, so labelling method and text type cannot be separated.",
     "The evaluation rows are fixed; the seeds vary only the initialisation and data order of training, so agreement across seeds does not measure uncertainty across datasets or labels.",
     "In some target datasets the label word itself occurs in the positive texts (about 20% in GoEmotions, 7% in EmpatheticDialogues), which favours name-matched transfer; removing those rows changed the overall rates by less than 0.02.",
+    "The numbers are aggregate statistics computed from the datasets; no dataset text is included. The datasets themselves remain under their own licences.",
+    "To be read together with the re-run CrossDatasetTransfer2026b, which kept the positives of rare labels in the training sample (111-124 instead of 11-24). With DailyDialog 'fear' as the source, all 8 pairs then had the name-matched label ranked first; with GoEmotions 'pride' as the source, 2 of 3 pairs did, by a small margin. For these two sources the NotSupported and Partial verdicts of this study most likely reflect too few training positives; the design cannot separate this from the change of seeds.",
+)
+STUDY_B_LIMITS = (
+    "A re-run of CrossDatasetTransfer2026 on the same 10 datasets with the same model and mapping; it is not an independent replication. Six source datasets use the same training rows as the first study, three target datasets the same evaluation rows, and 17% of the pairs differ only in the seeds.",
+    "One model (roberta-base), one training setting, five seeds (47-51), English only.",
+    "Transfer does not show that two labels denote the same concept, and a lack of transfer does not show that they differ.",
+    "For terms that are not basic emotions, the best other label shares an underlying basic emotion with the term in 62% of the seed-wise comparisons (for example guilt and shame, pride and joy); against unrelated labels the name-matched label is ahead on average.",
+    "Results depend strongly on the source dataset. For terms that are not basic emotions, the 18 pairs whose source is GoEmotions or GoodNewsEveryone taken together have the name-matched label behind the best other label on average (-0.031), while the other 28 pairs have it ahead (+0.045). For basic emotions the mean difference by source dataset ranges from -0.001 (GoEmotions) to +0.227 (BRIGHTER).",
+    "Rare labels enter the training sample with all their positives in every seed, and the label distribution of the sample differs from the natural one.",
+    "The thresholds of the verdict rule (50 training positives, AUC 0.6, 4 of 5 seeds) were chosen by the authors. One source label has 53 training positives, just above the threshold.",
     "The numbers are aggregate statistics computed from the datasets; no dataset text is included. The datasets themselves remain under their own licences.",
 )
 
@@ -92,33 +108,42 @@ def build(csv_path=CSV, mappings_path=os.path.join(HERE, "plutchik-mappings.ttl"
         g.add((EVD[name], RDF.type, OWL.ObjectProperty if kind == "object" else OWL.DatatypeProperty))
         g.add((EVD[name], RDFS.label, en(lab))); g.add((EVD[name], SKOS.definition, en(definition))); g.add((EVD[name], RDFS.range, rng))
         g.add((EVD[name], RDFS.domain, EVD.TransferEvidence))
-    for v in VERDICTS.values():
+    for v in VERDICTS.values():  # noqa
         g.add((EVD[v], RDF.type, EVD.Verdict)); g.add((EVD[v], RDFS.label, en(v)))
-    study = EVD.CrossDatasetTransfer2026
-    g.add((study, RDF.type, EVD.EvidenceStudy)); g.add((study, RDFS.label, en("Cross-dataset transfer of name-matched labels (2026-11)")))
-    g.add((study, DCTERMS.date, Literal("2026-11-27", datatype=XSD.date)))
-    g.add((study, DCTERMS.source, en("CombineEFOMoE issue #88 (pre-registered); mapping module 0.6.1")))
-    g.add((study, DCTERMS.description, en("For each of 10 English emotion datasets a multi-label roberta-base classifier was trained on the dataset's own labels (learning rate 2e-5, at most 8,000 training rows, seeds 42-46) and applied to up to 5,000 fixed rows of every other dataset. A pair is included when both labels map to the same Plutchik term and the target label has at least 20 positive and 20 negative rows.")))
-    with open(SOURCE, encoding="utf-8") as f:
-        src = json.load(f)
-    for name, digest in sorted({**src["inputs"], **src["scripts"]}.items()):
-        g.add((study, DCTERMS.source, en(f"sha256 {digest} {name}")))
-    for lim in STUDY_LIMITS:
-        g.add((study, SKOS.scopeNote, en(lim)))
     dec = lambda x: Literal(Decimal(x), datatype=XSD.decimal)
     integer = lambda x: Literal(int(x), datatype=XSD.integer)
-    with open(csv_path, newline="", encoding="utf-8") as f:
-        for row in csv.DictReader(f):
-            s, t = rec[(row["source_dataset"], row["source_label"])], rec[(row["target_dataset"], row["target_label"])]
-            assert str(mappings.value(s, MAP.mapsTo)).endswith("#" + row["term"]) and mappings.value(s, MAP.mapsTo) == mappings.value(t, MAP.mapsTo), row
-            e = EVD["t2026_" + str(s).split("#pn_")[-1] + "__" + str(t).split("#pn_")[-1]]
-            g.add((e, RDF.type, EVD.TransferEvidence)); g.add((e, EVD.fromStudy, study)); g.add((e, EVD.sourceMapping, s)); g.add((e, EVD.targetMapping, t))
-            for prop, col in (("matchedAuc", "matched_auc"), ("bestOtherAuc", "best_other_auc"), ("nativeAuc", "native_auc")):
-                g.add((e, EVD[prop], dec(row[col])))
-            for prop, col in (("rankOneSeeds", "rank1_seeds"), ("rankThreeSeeds", "rank3_seeds"), ("seedCount", "n_seeds"), ("sourceLabelCount", "n_source_labels"),
-                              ("targetPositives", "target_positives"), ("targetRows", "target_rows"), ("nativePositives", "native_positives")):
-                g.add((e, EVD[prop], integer(row[col])))
-            g.add((e, EVD.preregisteredVerdict, EVD[VERDICTS[row["preregistered_verdict"]]]))
+
+    def add_study(study, label, source_text, description, limits, source_path, csv_file, prefix, columns):
+        g.add((study, RDF.type, EVD.EvidenceStudy)); g.add((study, RDFS.label, en(label)))
+        g.add((study, DCTERMS.date, Literal("2026-11-27", datatype=XSD.date)))
+        g.add((study, DCTERMS.source, en(source_text)))
+        g.add((study, DCTERMS.description, en(description)))
+        with open(source_path, encoding="utf-8") as f:
+            src = json.load(f)
+        for name, digest in sorted({**src["inputs"], **src["scripts"]}.items()):
+            g.add((study, DCTERMS.source, en(f"sha256 {digest} {name}")))
+        for lim in limits:
+            g.add((study, SKOS.scopeNote, en(lim)))
+        with open(csv_file, newline="", encoding="utf-8") as f:
+            for row in csv.DictReader(f):
+                s, t = rec[(row["source_dataset"], row["source_label"])], rec[(row["target_dataset"], row["target_label"])]
+                assert str(mappings.value(s, MAP.mapsTo)).endswith("#" + row["term"]) and mappings.value(s, MAP.mapsTo) == mappings.value(t, MAP.mapsTo), row
+                e = EVD[prefix + str(s).split("#pn_")[-1] + "__" + str(t).split("#pn_")[-1]]
+                g.add((e, RDF.type, EVD.TransferEvidence)); g.add((e, EVD.fromStudy, study)); g.add((e, EVD.sourceMapping, s)); g.add((e, EVD.targetMapping, t))
+                for prop, col in (("matchedAuc", "matched_auc"), ("bestOtherAuc", "best_other_auc"), ("nativeAuc", "native_auc")):
+                    g.add((e, EVD[prop], dec(row[col])))
+                for prop, col in columns:
+                    g.add((e, EVD[prop], integer(row[col])))
+                g.add((e, EVD.preregisteredVerdict, EVD[VERDICTS[row["preregistered_verdict" if "preregistered_verdict" in row else "verdict"]]]))
+
+    common = (("rankOneSeeds", "rank1_seeds"), ("seedCount", "n_seeds"), ("sourceLabelCount", "n_source_labels"), ("targetPositives", "target_positives"), ("nativePositives", "native_positives"))
+    add_study(EVD.CrossDatasetTransfer2026, "Cross-dataset transfer of name-matched labels (2026-11)", "CombineEFOMoE issue #88 (pre-registered); mapping module 0.6.1",
+              "For each of 10 English emotion datasets a multi-label roberta-base classifier was trained on the dataset's own labels (learning rate 2e-5, at most 8,000 training rows, seeds 42-46) and applied to up to 5,000 fixed rows of every other dataset. A pair is included when both labels map to the same Plutchik term and the target label has at least 20 positive and 20 negative rows.",
+              STUDY_LIMITS, SOURCE, csv_path, "t2026_", common + (("rankThreeSeeds", "rank3_seeds"), ("targetRows", "target_rows")))
+    add_study(EVD.CrossDatasetTransfer2026b, "Cross-dataset transfer of name-matched labels, re-run with rare labels kept (2026-11b)", "CombineEFOMoE issue #91 (pre-registered); mapping module 0.6.1",
+              "A re-run of CrossDatasetTransfer2026 with seeds 47-51, evaluation rows re-drawn with a new seed (identical for the three target datasets that have at most 5,000 rows; the number of evaluation rows is not recorded per pair), and a training sample that first takes up to 200 positives of every label and then fills up to 8,000 rows at random. The pre-registered measure is the matched AUC minus the best other AUC; the verdict rule is given at evd:preregisteredVerdict.",
+              STUDY_B_LIMITS, SOURCE_B, CSV_B, "t2026b_", common + (("sourceTrainingPositives", "source_training_positives"),))
+    g.add((EVD.CrossDatasetTransfer2026b, DCTERMS.relation, EVD.CrossDatasetTransfer2026))
     return g
 
 
