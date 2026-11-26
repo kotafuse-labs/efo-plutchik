@@ -1,4 +1,4 @@
-# EFO-Plutchik v0.5.0 — データセットラベル写像の provenance competency questions (CQ-M1〜M5)
+# EFO-Plutchik — データセットラベル写像（モジュール 0.6.0）の provenance competency questions (CQ-M1〜M7。M6・M7 は CombineEFOMoE #85 で追加)
 # plutchik-mappings.ttl + efo-plutchik.ttl に対して、validate.run_mapping_cqs が見出しごとに切り出し、共通 PREFIX を前置して実行する。
 # 共通 PREFIX (付与される): plu: / map: / skos: / dcterms: / rdfs:
 # 注意: コメントに見出しの記号列を書かないこと（split が誤爆する）。
@@ -12,11 +12,12 @@ SELECT ?scheme ?dataset ?label ?kind ?target ?match ?basis WHERE {
 }
 ORDER BY ?scheme ?dataset ?label ?target
 
-### CQ-M2: 網羅性 — ある方式にだけ記録があり、別の方式で記録が欠けているラベル (期待: 空)
+### CQ-M2: 網羅性 — 方式が対象とするデータセット (map:coversDataset) のラベルなのに、その方式に記録が無いもの (期待: 空)
 SELECT ?scheme ?dataset ?label WHERE {
-    ?scheme a map:MappingScheme .
-    { SELECT DISTINCT ?dataset ?label WHERE { ?x map:dataset ?dataset ; map:sourceLabel ?label } }
-    FILTER NOT EXISTS { ?r map:inScheme ?scheme ; map:dataset ?dataset ; map:sourceLabel ?label }
+    ?scheme a map:MappingScheme ; map:coversDataset ?cs .
+    ?c skos:inScheme ?cs ; skos:notation ?label .
+    ?cs map:datasetKey ?dataset .
+    FILTER NOT EXISTS { ?r map:inScheme ?scheme ; map:label ?c }
 }
 
 ### CQ-M3: 根拠の完全性 — 根拠 (map:basis) のない記録と、文献 (dcterms:bibliographicCitation) のない方式 (期待: 空)
@@ -53,3 +54,28 @@ SELECT DISTINCT ?dataset ?label ?basic ?onlyIn WHERE {
     }
 }
 ORDER BY ?dataset ?label ?basic
+
+### CQ-M6: Plutchik の語 (基本 8・強度の変種 16・dyad 24) ごとに、名前か表に載る語形で対応する (closeMatch) ラベルを持つデータセットの数 (全体・読み手の注釈・書き手の選択。全体には得点の区切りも入る)
+SELECT ?term (COUNT(DISTINCT ?cs) AS ?n) (COUNT(DISTINCT ?reader) AS ?nReader) (COUNT(DISTINCT ?writer) AS ?nWriter) WHERE {
+    VALUES ?cls { plu:BasicEmotion plu:IntensityVariant plu:PrimaryDyad plu:SecondaryDyad plu:TertiaryDyad }
+    ?term a ?cls .
+    OPTIONAL {
+        ?r map:inScheme map:Plutchik2001Names ; map:matchType skos:closeMatch ; map:mapsTo ?term ; map:label ?c . ?c skos:inScheme ?cs .
+        OPTIONAL { ?cs map:labellingMethod map:ReaderAnnotated . BIND (?cs AS ?reader) }
+        OPTIONAL { ?cs map:labellingMethod map:WriterChosen . BIND (?cs AS ?writer) }
+    }
+}
+GROUP BY ?term
+ORDER BY ?term
+
+### CQ-M7: 読み手の注釈で名前が対応するラベルを、どのデータセットにも持たない Plutchik の語
+SELECT ?cls ?term WHERE {
+    VALUES ?cls { plu:BasicEmotion plu:IntensityVariant plu:PrimaryDyad plu:SecondaryDyad plu:TertiaryDyad }
+    ?term a ?cls .
+    FILTER NOT EXISTS {
+        ?r map:inScheme map:Plutchik2001Names ; map:matchType skos:closeMatch ; map:mapsTo ?term ; map:label ?c .
+        ?c skos:inScheme ?cs . ?cs map:labellingMethod map:ReaderAnnotated .
+    }
+}
+ORDER BY ?cls ?term
+

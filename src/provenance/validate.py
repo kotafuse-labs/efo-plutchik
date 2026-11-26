@@ -392,7 +392,7 @@ def check_efo_alignment(verbose=True):
     return bool(closematch) and all(o in efo_subjects for o in closematch)
 
 
-# ====== データセットラベル写像（v0.5.0、CombineEFOMoE #33）======
+# ====== データセットラベル写像（モジュール 0.6.1。v0.5.0 = CombineEFOMoE #33、追加のデータセット = #85）======
 
 def _mapping_graph():
     g = Graph()
@@ -451,7 +451,7 @@ PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 
 
 def run_mapping_cqs(graph=None, verbose=True):
-    """写像の provenance CQ (mapping_cq.rq の CQ-M1〜M5) を回し、{見出し: 行のリスト} を返す。CQ-M2 / M3 は空が期待値。"""
+    """写像の provenance CQ (mapping_cq.rq の CQ-M1〜M7) を回し、{見出し: 行のリスト} を返す。CQ-M2 / M3 は空が期待値。"""
     g = _mapping_graph() if graph is None else graph
     with open(os.path.join(ONT, "mapping_cq.rq"), encoding="utf-8") as f:
         content = f.read()
@@ -480,7 +480,7 @@ def main():
         check_efo_alignment()
     except EFOUnavailable as e:
         print(f"[EFO-align] skip: {e}")
-    print("\n=== データセットラベル写像 (v0.5.0) ===")
+    print("\n=== データセットラベル写像 (モジュール 0.6.1) ===")
     validate_mappings()
     audit_mappings()
     run_mapping_cqs()

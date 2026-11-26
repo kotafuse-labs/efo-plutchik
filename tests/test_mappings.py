@@ -1,4 +1,4 @@
-"""データセットラベル写像（v0.5.0、CombineEFOMoE #33）のテスト。学習不要・完全ローカル。
+"""データセットラベル写像（モジュール 0.6.0。v0.5.0 = CombineEFOMoE #33、追加のデータセット = #85）のテスト。学習不要・完全ローカル。
 
 - plutchik-mappings.ttl が build_mappings.py の出力と一致する（生成物の手編集・生成忘れを弾く）。
 - Plutchik2001Names 方式は mapping_shapes.ttl に conforms、負例は弾かれる。
@@ -115,7 +115,8 @@ def test_mapping_cqs_answer_and_completeness_holds():
     r = run_mapping_cqs(verbose=False)
     assert r["CQ-M2"] == [] and r["CQ-M3"] == []
     labels = {(row[1], row[2]) for row in r["CQ-M1"]}
-    assert len(labels) == 28 + 11                                   # GoEmotions 28 + SemEval 11 のラベルすべてが辿れる
+    assert len({x for x in labels if x[0] in ("goemotions", "semeval2018")}) == 28 + 11   # GoEmotions 28 + SemEval 11 のラベルすべてが辿れる
+    assert len(labels) == 28 + 11 + 119                             # 追加の 10 データセットのラベル 119 個（CombineEFOMoE #85）
     assert {(row[1], row[2].split("#")[1], row[3]) for row in r["CQ-M5"]} == _M5_EXPECTED
     assert all(row[0] == "goemotions" for row in r["CQ-M5"])         # SemEval は 2 方式で食い違わない
 
@@ -128,3 +129,122 @@ def test_mapping_cq_completeness_detects_gaps():
     r = run_mapping_cqs(graph=g, verbose=False)
     assert [(row[1], row[2]) for row in r["CQ-M2"]] == [("goemotions", "amusement")]
     assert [row[1] for row in r["CQ-M3"]] == ["basis"]
+
+
+# ---- CombineEFOMoE #85: 追加のデータセット ----
+
+def _count(g, ds, mt=None, unmapped=False):
+    rs = [r for r in g.subjects(MAP.inScheme, MAP.Plutchik2001Names) if str(g.value(r, MAP.dataset)) == ds]
+    return sum((r, RDF.type, MAP.UnmappedLabel) in g for r in rs) if unmapped else sum(g.value(r, MAP.matchType) == mt for r in rs)
+
+
+def test_extra_dataset_counts():
+    """追加の 10 データセット: closeMatch（名前の一致 + 表に載る語形）と、写さないラベルの数。broadMatch は使わない。"""
+    g = _mapping_graph()
+    expect = {"empatheticdialogues": (16, 16), "crowdenvent": (11, 2), "goodnewseveryone": (10, 5), "brighter_eng": (5, 0), "xed": (8, 1), "ssec": (8, 0),
+              "enisear": (7, 0), "dailydialog": (5, 2), "semeval2018_eioc": (4, 0), "electoraltweets": (7, 12)}
+    for ds, (close, un) in expect.items():
+        assert (_count(g, ds, SKOS.closeMatch), _count(g, ds, SKOS.broadMatch), _count(g, ds, unmapped=True)) == (close, 0, un), ds
+    assert sum(a + b for a, b in expect.values()) == 119
+
+
+def test_name_variants_and_unmapped_reasons():
+    g = _mapping_graph()
+    r = MAP["pn_empatheticdialogues_terrified"]
+    assert g.value(r, MAP.mapsTo) == PLU.Terror and str(g.value(r, MAP.nameVariantOf)) == "terror"
+    assert g.value(MAP["pn_empatheticdialogues_hopeful"], MAP.mapsTo) == PLU.Hope
+    for lab in ("afraid", "furious", "jealous", "content"):          # 表に無い語形・類義語は写さない
+        assert (MAP[f"pn_empatheticdialogues_{lab}"], RDF.type, MAP.UnmappedLabel) in g, lab
+    assert (MAP["pn_dailydialog_happiness"], RDF.type, MAP.UnmappedLabel) in g
+    assert "Composite label" in str(g.value(MAP["pn_electoraltweets_calmness_or_serenity"], MAP.basis))
+    assert "Qualified form" in str(g.value(MAP["pn_goodnewseveryone_negative_surprise"], MAP.basis))
+    for lab in ("love_including_like", "negative_anticipation_including_pessimism", "positive_anticipation_including_optimism"):   # 0.6.1: データの複合のラベル
+        assert (MAP[f"pn_goodnewseveryone_{lab}"], RDF.type, MAP.UnmappedLabel) in g, lab
+    # 強度のクラス（EI-oc）は強度の変種に写さない: 写す先は基本感情だけ
+    assert {g.value(r, MAP.mapsTo) for r in g.subjects(MAP.dataset, Literal("semeval2018_eioc"))} == {PLU.Anger, PLU.Fear, PLU.Joy, PLU.Sadness}
+
+
+def test_scheme_scope_and_dataset_metadata():
+    """Lim & Cheong の方式は 2 データセットだけが対象。追加のデータセットは、付け方・出典・確認元を持つ。"""
+    g = _mapping_graph()
+    assert {str(o).split("#")[1] for o in g.objects(MAP.LimCheong2024, MAP.coversDataset)} == {"semeval2018_labels", "goemotions_labels"}
+    assert len(list(g.objects(MAP.Plutchik2001Names, MAP.coversDataset))) == 12
+    assert not [r for r in g.subjects(MAP.inScheme, MAP.LimCheong2024) if str(g.value(r, MAP.dataset)) not in ("semeval2018", "goemotions")]
+    assert g.value(MAP["empatheticdialogues_labels"], MAP.labellingMethod) == MAP.WriterChosen
+    assert g.value(MAP["semeval2018_eioc_labels"], MAP.labellingMethod) == MAP.ScoreThresholded
+    assert g.value(MAP["ssec_labels"], MAP.labellingMethod) == MAP.ReaderAnnotated
+
+
+def test_name_variant_must_match_target_and_scope_is_enforced():
+    g = _mapping_graph()
+    r = MAP["pn_empatheticdialogues_terrified"]
+    g.remove((r, MAP.nameVariantOf, None)); g.add((r, MAP.nameVariantOf, Literal("rage")))        # 語形の元の語が写す先と違う
+    assert validate_mappings(graph=g, verbose=False) is False
+    g = _mapping_graph()
+    x = MAP["lc_ssec_anger"]                                                                     # 対象外の方式に記録を足す
+    for t in ((x, RDF.type, MAP.UnmappedLabel), (x, MAP.inScheme, MAP.LimCheong2024), (x, MAP.label, MAP["ssec/anger"]), (x, MAP.basis, Literal("x"))):
+        g.add(t)
+    assert validate_mappings(graph=g, verbose=False) is False
+
+
+def test_coverage_cqs_by_labelling_method():
+    """CQ-M6 / M7: Plutchik の 48 語のうち、読み手の注釈で名前が対応するラベルを持たない語。"""
+    from src.provenance.validate import run_mapping_cqs
+    r = run_mapping_cqs(verbose=False)
+    assert len(r["CQ-M6"]) == 48
+    missing = {row[1].split("#")[1] for row in r["CQ-M7"]}
+    assert {"Awe", "Contempt", "Submission", "Aggressiveness", "Rage", "Terror", "Ecstasy"} <= missing
+    assert not ({"Anger", "Joy", "Love", "Optimism", "Pessimism", "Annoyance", "Admiration", "Pride", "Guilt", "Shame", "Grief", "Remorse", "Curiosity"} & missing)
+    assert len(missing) == 25                                        # 48 語のうち 23 語に、読み手の注釈で名前が対応するラベルがある
+    writer_only = {row[0].split("#")[1] for row in r["CQ-M6"] if int(row[2]) == 0 and int(row[3]) > 0}
+    assert writer_only == {"Anxiety", "Apprehension", "Boredom", "Hope", "Sentimentality", "Terror"}
+
+
+def _bad(edit):
+    g = _mapping_graph()
+    edit(g)
+    return validate_mappings(graph=g, verbose=False) is False
+
+
+def test_name_variant_needs_a_listed_rule():
+    """語形は、表（map:NameVariantRule）に載る組だけ。自己申告の nameVariantOf では closeMatch を正当化できない（#85 の監査）。"""
+    def retarget(g):                                   # 写す先も語形の元の語も揃えて、別の感情に付け替える
+        r = MAP["pn_empatheticdialogues_terrified"]
+        for pr in (MAP.mapsTo, MAP.nameVariantOf):
+            g.remove((r, pr, None))
+        g.add((r, MAP.mapsTo, PLU.Rage)); g.add((r, MAP.nameVariantOf, Literal("rage")))
+        g.remove((MAP["empatheticdialogues/terrified"], SKOS.closeMatch, None)); g.add((MAP["empatheticdialogues/terrified"], SKOS.closeMatch, PLU.Rage))
+    assert _bad(retarget)
+
+    def unlisted(g):                                   # 表に無い語形（afraid → Fear）
+        r, c = MAP["pn_empatheticdialogues_afraid"], MAP["empatheticdialogues/afraid"]
+        g.remove((r, RDF.type, MAP.UnmappedLabel)); g.add((r, RDF.type, MAP.ConceptMapping))
+        g.add((r, MAP.mapsTo, PLU.Fear)); g.add((r, MAP.matchType, SKOS.closeMatch)); g.add((r, MAP.nameVariantOf, Literal("fear"))); g.add((c, SKOS.closeMatch, PLU.Fear))
+    assert _bad(unlisted)
+    assert _bad(lambda g: g.add((MAP["pn_xed_anger"], MAP.nameVariantOf, Literal("rage"))))                 # 名前が一致する記録に語形
+    assert _bad(lambda g: g.add((MAP["pn_empatheticdialogues_terrified"], MAP.nameVariantOf, Literal("fear"))))   # 語形が 2 つ
+    assert _bad(lambda g: g.add((MAP["pn_empatheticdialogues_afraid"], MAP.nameVariantOf, Literal("fear"))))      # 写さない記録に語形
+    g = _mapping_graph()
+    assert len(list(g.subjects(RDF.type, MAP.NameVariantRule))) == 16
+
+
+def test_record_and_concept_integrity():
+    """記録とラベル概念の一致、概念の所属、直接の SKOS の対応と記録の一致、データセットの付帯情報（#85 の監査）。"""
+    assert _bad(lambda g: (g.remove((MAP["pn_xed_anger"], MAP.dataset, None)), g.add((MAP["pn_xed_anger"], MAP.dataset, Literal("ssec")))))
+    assert _bad(lambda g: (g.remove((MAP["pn_xed_neutral"], MAP.sourceLabel, None)), g.add((MAP["pn_xed_neutral"], MAP.sourceLabel, Literal("joy")))))
+    assert _bad(lambda g: g.remove((MAP["pn_xed_anger"], RDF.type, MAP.ConceptMapping)))                      # 種類の無い記録
+    assert _bad(lambda g: g.add((MAP["xed/neutral"], SKOS.closeMatch, PLU.Joy)))                              # 記録の無い直接の対応
+    assert _bad(lambda g: g.add((MAP["orphan"], RDF.type, SKOS.Concept)))                                     # どの体系にも属さない概念
+    for pr in (MAP.labellingMethod, MAP.labelsCheckedIn, MAP.datasetKey):
+        assert _bad(lambda g, pr=pr: g.remove((MAP["ssec_labels"], pr, None))), pr
+
+
+def test_no_licence_strings_and_version():
+    """利用条件は記録しない（配布元を見る）。写像のモジュールは 0.6.0 で、コア 0.5.0 を import する。"""
+    from rdflib.namespace import DCTERMS, OWL
+    from rdflib import URIRef
+    g = _mapping_graph()
+    assert not [1 for cs in g.subjects(RDF.type, SKOS.ConceptScheme) for _ in g.objects(cs, DCTERMS.rights)]
+    onto = URIRef("https://w3id.org/efo-plutchik/mapping")
+    assert str(g.value(onto, OWL.versionInfo)) == "0.6.1" and g.value(onto, OWL.imports) == URIRef("https://w3id.org/efo-plutchik/0.5.0")
+

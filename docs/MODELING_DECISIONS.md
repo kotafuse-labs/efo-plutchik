@@ -80,3 +80,47 @@
 - **E-6 バイリンガル**: 全 term に `@en` / `@ja` の label と定義（doc SHACL で両言語を必須化、94/94）。
 - **E-7 限界**: 強度の変種・二次 / 三次 dyad の名前は Plutchik (2001) の図に基づき、心理学的な妥当性を本モジュールが
   主張するものではない。写像の closeMatch は名前の一致に基づく操作的な判断で、データセットの注釈者の意図とは別。
+
+## F. 0.6.0 の設計判断（2026-11-27、CombineEFOMoE Issue #85）
+
+ユーザーとの合意: 写像を 12 データセットに広げる。語形の違いは明示した表に載るものだけ認める。方式ごとに対象のデータセットを宣言する。
+版は、パッケージと写像のモジュールを 0.6.0 とし、コアのオントロジー（`efo-plutchik.ttl`）は中身が変わらないので 0.5.0 のまま。
+
+- **F-1 何を足したか**: `map:Plutchik2001Names` の対象に 10 データセットを足した（EmpatheticDialogues、crowd-enVENT、GoodNewsEveryone、
+  BRIGHTER の英語、XED、SSEC、enISEAR、DailyDialog、SemEval-2018 EI-oc、Electoral Tweets。ラベル 119 個）。
+  扱うのはラベルの名前と出典だけで、データの本文は入れない。利用条件は記録しない（配布元を `dcterms:source` で指す）。
+- **F-2 語形の規則**: ラベルが形容詞・分詞の形（annoyed、terrified など）のとき、`map:NameVariantRule` の 16 組に載るものだけを
+  `skos:closeMatch` にする（`map:nameVariantOf` に元の語）。表に無い語形と類義語（afraid、furious、jealous、happiness など）は写さない。
+  SHACL は、記録の語形が表の組と一致することを検査する。表そのものが妥当かは、検査の対象ではない（人が読んで確かめる）。
+- **F-3 写さないラベル**: 複数の語を "or" でつないだラベル（Electoral Tweets の 7 個）、限定のついたラベル（negative / positive surprise）、
+  感情でない区分（neutral、no-emotion）、残りをまとめる区分（DailyDialog の no emotion）。理由を `map:basis` に書く。
+  同じ文字列でも、GoEmotions では Ekman の対応で `skos:broadMatch` になり、追加のデータセットでは写さないものがある
+  （disappointment、relief、caring）。Ekman の対応の出典が GoEmotions だけにあるため。
+- **F-4 方式の対象**: `map:coversDataset` で、方式が対象とするデータセットを宣言する。`map:LimCheong2024` は SemEval-2018 E-c と
+  GoEmotions だけ。網羅の検査は「対象のデータセットのラベルは、その方式に記録を 1 つ持つ。対象でなければ持たない」。
+- **F-5 ラベルの付け方**: `map:labellingMethod` に、読み手の注釈（`map:ReaderAnnotated`）・書き手の選択（`map:WriterChosen`）・
+  得点の区切り（`map:ScoreThresholded`）を記録する。CQ-M6 / M7 で、Plutchik の 48 語のうち、名前か語形で対応するラベルを持つ語を数える:
+  どれかのデータセットにある 29、読み手の注釈である 23、書き手の選択だけ 6（Anxiety・Apprehension・Boredom・Hope・Sentimentality・Terror）、
+  どこにも無い 19（強度の変種 7、dyad 12）。
+- **F-6 強度のクラスは変種に写さない**: SemEval-2018 EI-oc の 4 段階は、人手の得点を区切った帯で、「annoyance」や「rage」という語を
+  人が選んだものではない。ラベルは anger / fear / joy / sadness の 4 つとして基本感情に写し、強度の尺度は `map:intensityScale` に書く
+  （CombineEFOMoE #81・#82 の結果に基づく）。
+- **F-7 限界**: (1) closeMatch は名前（か表に載る語形）の一致で、概念が同じであることは示さない。特に dyad の名前
+  （pride = anger + joy、guilt = joy + fear、shame、sentimentality、anxiety）は、日常語の意味と Plutchik の成分が合うとは限らない。
+  dyad の成分まで降ろして使うときは注意する。(2) ラベルの名前は、論文・質問票・配布物の説明で確認した。データファイルの中の値まで
+  確認したのは EI-oc と Electoral Tweets だけ（`map:labelsCheckedIn` に範囲を書く）。Electoral Tweets は 1 つの選択肢が、データでは
+  空白 2 つで書かれている。(3) 「読み手の注釈で 23 語」のうち、Acceptance・Amazement・Vigilance は Electoral Tweets だけ、
+  Curiosity・Disapproval・Grief・Remorse は GoEmotions だけが根拠。(4) どこにも無い 19 語のうち Serenity・Interest などは、
+  Electoral Tweets の複合のラベルの中に語としては現れる。(5) GoodNewsEveryone の最初の注釈の段階にある「No emotion」は、
+  15 個の区分に入っていないので一覧に無い。件数をデータセットの間で比べるときは注意する。
+- **F-8 監査**: CombineEFOMoE #85 の独立監査で、ラベルの一覧 10 個と一次ソースの照合、既存の 2 データセットの記録が 1 つも変わらないこと
+  （v0.5.0 の 875 triple がすべて残る）、下流の利用箇所の結果が同じことを確認した。監査が見つけた SHACL の抜け道（自己申告の語形、
+  体系に属さない概念、記録とラベル概念の食い違い）は塞ぎ、テストに入れた。
+- **F-9 0.6.1 の訂正（2026-11-27、CombineEFOMoE #88 のデータの入手で判明）**: GoodNewsEveryone のデータのラベルは、論文の名前
+  （love、pessimism、optimism、negative surprise、positive surprise）ではなく、`love_including_like`・
+  `negative_anticipation_including_pessimism`・`positive_anticipation_including_optimism`・`negative_surprise`・`positive_surprise` だった。
+  `map:sourceLabel` は「データセットに書かれたとおり」なので、データの綴りに直した。前の 3 つは複数の区分をまとめた名前なので、
+  F-3 の規則どおり写さない（0.6.0 では love / pessimism / optimism を closeMatch にしていた）。GoodNewsEveryone の closeMatch は 13 → 10、
+  写さないラベルは 2 → 5。Love・Optimism は SemEval-2018 E-c と GoEmotions、Pessimism は SemEval-2018 E-c に残る。
+  論文の名前だけでラベルを決めると、こういう食い違いを見逃す。
+

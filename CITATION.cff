@@ -3,21 +3,22 @@ message: "If you use the EFO-Plutchik ontology module, please cite it as below."
 title: "EFO-Plutchik: an EFO-compatible ontology module for Plutchik's wheel of emotions"
 abstract: >-
   An Emotion Frame Ontology (EFO) compatible module formalizing Plutchik's
-  wheel of emotions. Release 0.5.0 has 48 emotion individuals — 8 basic
+  wheel of emotions. The core ontology (0.5.0) has 48 emotion individuals — 8 basic
   emotions, 16 intensity variants and all 24 dyads (primary, secondary and
   tertiary) — with the 4 opposition pairs, the geometry of the wheel, a
   vocabulary for valence/arousal/dominance readings, English and Japanese
-  labels, and two documented mappings from dataset labels (SemEval-2018,
-  GoEmotions) to the theory. It includes derivation rules for inferring
+  labels. The mapping module (0.6.1) maps the labels of 12 emotion datasets
+  to the theory under documented schemes and records how each dataset's
+  labels were assigned. It includes derivation rules for inferring
   compound-emotion occurrences from intensity readings and a machine-checkable
   validation layer (SHACL shapes, SPARQL competency questions, OWL-RL
   consistency).
-date-released: "2026-11-14"
+date-released: "2026-11-27"
 type: dataset
 authors:
   - family-names: "Fuse"
     given-names: "Kota"
-version: "0.5.0"
+version: "0.6.1"
 license: "CC-BY-4.0"
 keywords:
   - ontology

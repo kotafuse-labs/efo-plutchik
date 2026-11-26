@@ -6,8 +6,9 @@
 @prefix skos: <http://www.w3.org/2004/02/skos/core#> .
 @prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
 
-# v0.5.0 写像の妥当性 SHACL（conforms でなければならない）。コア efo-plutchik.ttl と plutchik-mappings.ttl をマージして当てる。
-# 対象は map:ConceptMapping（Plutchik2001Names 方式）と、全ラベルの網羅（両方式）。
+# 写像（モジュール 0.6.0）の妥当性 SHACL（conforms でなければならない）。コア efo-plutchik.ttl と plutchik-mappings.ttl をマージして当てる。
+# 対象は map:ConceptMapping（Plutchik2001Names 方式）、方式ごとの対象のデータセットのラベルの網羅、記録とラベル概念の一致、
+# データセットのラベル体系の付帯情報。検査するのは内部の整合で、写像の意味の正しさ（ラベルと感情が同じ概念か）ではない。
 # Lim & Cheong の成分写像の監査は mapping_audit_shapes.ttl（既知の Violation / Warning がある）。
 
 map:shapesPrefixes a owl:Ontology ;
@@ -26,13 +27,30 @@ map:ConceptMappingShape a sh:NodeShape ;
                   sh:message "A concept mapping must record its basis."@en ] ;
     sh:property [ sh:path map:label ; sh:minCount 1 ; sh:maxCount 1 ; sh:class skos:Concept ;
                   sh:message "A mapping record must be about exactly one dataset label concept."@en ] ;
+    sh:property [ sh:path map:nameVariantOf ; sh:maxCount 1 ; sh:datatype xsd:string ] ;
     sh:sparql [
-        sh:message "A closeMatch must be justified by an identical name (dataset label = English label of the Plutchik term)."@en ;
+        sh:message "A closeMatch must be justified by an identical name (dataset label = English label of the Plutchik term), or by a listed name-variant rule (map:NameVariantRule with this label as its form and this target as its term) recorded in map:nameVariantOf."@en ;
         sh:prefixes map:shapesPrefixes ;
         sh:select """
             SELECT $this ?value WHERE {
                 $this map:matchType skos:closeMatch ; map:mapsTo ?value ; map:sourceLabel ?l .
                 FILTER NOT EXISTS { ?value rdfs:label ?en . FILTER(LANG(?en) = "en" && LCASE(STR(?en)) = LCASE(STR(?l))) }
+                FILTER NOT EXISTS {
+                    ?rule a map:NameVariantRule ; map:variantForm ?form ; map:variantOfTerm ?value . FILTER(STR(?form) = STR(?l))
+                    $this map:nameVariantOf ?v . ?value rdfs:label ?en2 . FILTER(LANG(?en2) = "en" && LCASE(STR(?en2)) = LCASE(STR(?v)))
+                }
+            }""" ;
+    ] ;
+    sh:sparql [
+        sh:message "map:nameVariantOf may only appear on a closeMatch whose label differs from the target's name and is listed by a name-variant rule for that target."@en ;
+        sh:prefixes map:shapesPrefixes ;
+        sh:select """
+            SELECT $this ?value WHERE {
+                $this map:nameVariantOf ?value ; map:sourceLabel ?l .
+                OPTIONAL { $this map:mapsTo ?t } OPTIONAL { $this map:matchType ?mt }
+                BIND (EXISTS { ?t rdfs:label ?en . FILTER(LANG(?en) = "en" && LCASE(STR(?en)) = LCASE(STR(?l))) } AS ?identical)
+                BIND (EXISTS { ?rule a map:NameVariantRule ; map:variantForm ?form ; map:variantOfTerm ?t . FILTER(STR(?form) = STR(?l)) } AS ?listed)
+                FILTER (!BOUND(?t) || !BOUND(?mt) || ?mt != skos:closeMatch || ?identical || !?listed)
             }""" ;
     ] ;
     sh:sparql [
@@ -59,12 +77,60 @@ map:UnmappedLabelShape a sh:NodeShape ;
     sh:property [ sh:path map:basis ; sh:minCount 1 ; sh:datatype xsd:string ;
                   sh:message "An unmapped label must record the reason."@en ] ;
     sh:property [ sh:path map:mapsTo ; sh:maxCount 0 ;
-                  sh:message "An unmapped label must not map to anything."@en ] .
+                  sh:message "An unmapped label must not map to anything."@en ] ;
+    sh:property [ sh:path map:nameVariantOf ; sh:maxCount 0 ;
+                  sh:message "An unmapped label must not record a name variant."@en ] .
+
+# 語形の規則: 形と、元の感情を 1 つずつ持つ。形は、その感情の名前そのものではない。
+map:NameVariantRuleShape a sh:NodeShape ;
+    sh:targetClass map:NameVariantRule ;
+    sh:property [ sh:path map:variantForm ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ] ;
+    sh:property [ sh:path map:variantOfTerm ; sh:minCount 1 ; sh:maxCount 1 ; sh:class plu:PlutchikEmotion ] .
+
+# 写像の記録: 種類をちょうど 1 つ持ち、データセットのキーと元のラベルが、対象のラベル概念と一致する。
+map:MappingRecordShape a sh:NodeShape ;
+    sh:targetSubjectsOf map:inScheme ;
+    sh:property [ sh:path map:label ; sh:minCount 1 ; sh:maxCount 1 ; sh:class skos:Concept ] ;
+    sh:property [ sh:path map:dataset ; sh:minCount 1 ; sh:maxCount 1 ] ;
+    sh:property [ sh:path map:sourceLabel ; sh:minCount 1 ; sh:maxCount 1 ] ;
+    sh:sparql [
+        sh:message "A mapping record must be exactly one of ComponentMapping, ConceptMapping or UnmappedLabel."@en ;
+        sh:prefixes map:shapesPrefixes ;
+        sh:select """
+            SELECT $this WHERE {
+                { SELECT $this (COUNT(DISTINCT ?k) AS ?n) WHERE {
+                      $this map:inScheme ?s .
+                      OPTIONAL { $this a ?k . FILTER(?k IN (map:ComponentMapping, map:ConceptMapping, map:UnmappedLabel)) }
+                  } GROUP BY $this }
+                FILTER(?n != 1)
+            }""" ;
+    ] ;
+    sh:sparql [
+        sh:message "A mapping record's dataset and source label must equal the dataset key and the notation of its label concept."@en ;
+        sh:prefixes map:shapesPrefixes ;
+        sh:select """
+            SELECT $this WHERE {
+                $this map:label ?c ; map:dataset ?d ; map:sourceLabel ?l .
+                FILTER NOT EXISTS { ?c skos:inScheme ?cs ; skos:notation ?n . ?cs map:datasetKey ?k . FILTER(STR(?k) = STR(?d) && STR(?n) = STR(?l)) }
+            }""" ;
+    ] .
 
 map:LabelCoverageShape a sh:NodeShape ;
     sh:targetClass skos:Concept ;
+    sh:property [ sh:path skos:inScheme ; sh:minCount 1 ; sh:maxCount 1 ; sh:class skos:ConceptScheme ;
+                  sh:message "A dataset label concept must belong to exactly one dataset label scheme."@en ] ;
+    sh:property [ sh:path skos:notation ; sh:minCount 1 ; sh:maxCount 1 ] ;
     sh:sparql [
-        sh:message "Every dataset label must have exactly one record (mapping or unmapped) in each mapping scheme."@en ;
+        sh:message "A direct SKOS mapping triple on a label concept must be backed by a mapping record."@en ;
+        sh:prefixes map:shapesPrefixes ;
+        sh:select """
+            SELECT $this ?value WHERE {
+                $this ?mt ?value . FILTER(?mt IN (skos:closeMatch, skos:broadMatch, skos:exactMatch, skos:narrowMatch, skos:relatedMatch))
+                FILTER NOT EXISTS { ?r map:label $this ; map:matchType ?mt ; map:mapsTo ?value . }
+            }""" ;
+    ] ;
+    sh:sparql [
+        sh:message "Every dataset label must have exactly one record (mapping or unmapped) in each mapping scheme that covers its dataset, and none in a scheme that does not."@en ;
         sh:prefixes map:shapesPrefixes ;
         sh:select """
             SELECT $this ?value WHERE {
@@ -75,6 +141,28 @@ map:LabelCoverageShape a sh:NodeShape ;
                         OPTIONAL { ?r map:label $this ; map:inScheme ?value . }
                     } GROUP BY $this ?value
                 }
-                FILTER(?n != 1)
+                BIND (EXISTS { $this skos:inScheme ?cs . ?value map:coversDataset ?cs . } AS ?covered)
+                FILTER((?covered && ?n != 1) || (!?covered && ?n != 0))
             }""" ;
+    ] .
+
+# CombineEFOMoE #85: データセットのラベル体系は、キー・ラベルの付け方・出典・確認元を持ち、少なくとも 1 つの方式の対象である。
+map:DatasetSchemeShape a sh:NodeShape ;
+    sh:targetClass skos:ConceptScheme ;
+    sh:property [ sh:path [ sh:inversePath map:coversDataset ] ; sh:minCount 1 ;
+                  sh:message "A dataset label scheme must be covered by at least one mapping scheme."@en ] ;
+    sh:property [ sh:path map:datasetKey ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ] ;
+    sh:property [ sh:path map:labellingMethod ; sh:minCount 1 ; sh:maxCount 1 ; sh:class map:LabellingMethod ;
+                  sh:message "A dataset label scheme must record exactly one labelling method."@en ] ;
+    sh:property [ sh:path <http://purl.org/dc/terms/bibliographicCitation> ; sh:minCount 1 ;
+                  sh:message "A dataset label scheme must record its citation."@en ] ;
+    sh:property [ sh:path <http://purl.org/dc/terms/source> ; sh:minCount 1 ; sh:nodeKind sh:IRI ;
+                  sh:message "A dataset label scheme must record where the data are distributed."@en ] ;
+    sh:property [ sh:path map:labelsCheckedIn ; sh:minCount 1 ; sh:datatype xsd:string ;
+                  sh:message "A dataset label scheme must record where its label list was checked."@en ] ;
+    sh:sparql [
+        sh:message "Dataset keys must be unique."@en ;
+        sh:prefixes map:shapesPrefixes ;
+        sh:select """
+            SELECT $this WHERE { $this map:datasetKey ?k . ?other map:datasetKey ?k . FILTER(?other != $this) }""" ;
     ] .
