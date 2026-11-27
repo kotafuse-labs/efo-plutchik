@@ -1,4 +1,4 @@
-"""転移の証拠のモジュール 0.2.1 を生成する（CombineEFOMoE #88 → #90、#91 → #92）。
+"""転移の証拠のモジュール 0.2.2 を生成する（CombineEFOMoE #88 → #90、#91 → #92）。
 
 調査は 2 つ。CrossDatasetTransfer2026（#88）と、その再実行 CrossDatasetTransfer2026b（#91。新しい seed、まれなラベルの陽性を学習に残す、判定の規則を直す）。
 
@@ -27,7 +27,7 @@ PLU = Namespace("https://w3id.org/efo-plutchik#")
 MAP = Namespace("https://w3id.org/efo-plutchik/mapping#")
 EVD = Namespace("https://w3id.org/efo-plutchik/mapping/evidence#")
 ONTO = URIRef("https://w3id.org/efo-plutchik/mapping/evidence")
-VERSION = "0.2.1"
+VERSION = "0.2.2"
 SOURCE = os.path.join(HERE, "evidence", "crossdata_transfer_2026-11.source.json")
 CSV_B = os.path.join(HERE, "evidence", "crossdata_transfer_2026-11b.csv")
 SOURCE_B = os.path.join(HERE, "evidence", "crossdata_transfer_2026-11b.source.json")
@@ -66,7 +66,7 @@ STUDY_LIMITS = (
     "The evaluation rows are fixed; the seeds vary only the initialisation and data order of training, so agreement across seeds does not measure uncertainty across datasets or labels.",
     "In some target datasets the label word itself occurs in the positive texts (about 20% in GoEmotions, 7% in EmpatheticDialogues), which favours name-matched transfer; removing those rows changed the overall rates by less than 0.02.",
     "The numbers are aggregate statistics computed from the datasets; no dataset text is included. The datasets themselves remain under their own licences.",
-    "To be read together with the re-run CrossDatasetTransfer2026b, which kept the positives of rare labels in the training sample (111-124 instead of 11-24). With DailyDialog 'fear' as the source, all 8 pairs then had the name-matched label ranked first; with GoEmotions 'pride' as the source, 2 of 3 pairs did, by a small margin. For these two sources the NotSupported and Partial verdicts of this study most likely reflect too few training positives; the design cannot separate this from the change of seeds.",
+    "To be read together with the re-run CrossDatasetTransfer2026b, which kept the positives of rare labels in the training sample (DailyDialog 'fear': 124 instead of 11-16; GoEmotions 'pride': 111 instead of 16-24). With DailyDialog 'fear' as the source, all 8 pairs were then Supported (name-matched label ranked first in at least 4 of 5 seeds); with GoEmotions 'pride' as the source, 2 of 3 pairs were, by a small margin. For these two sources the NotSupported and Partial verdicts of this study most likely reflect too few training positives; the design cannot separate this from the change of seeds.",
 )
 STUDY_B_LIMITS = (
     "A re-run of CrossDatasetTransfer2026 on the same 10 datasets with the same model and mapping; it is not an independent replication. Six source datasets use the same training rows as the first study, three target datasets the same evaluation rows, and 17% of the pairs differ only in the seeds.",

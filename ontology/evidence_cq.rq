@@ -1,4 +1,4 @@
-# 転移の証拠の CQ（証拠のモジュール 0.2.1）。調査が 2 つある。T1〜T3 と T5 は調査ごとに答える。T4 は 2 つの調査を合わせて「証拠が無い」を判定する。T6 は 2 つの調査を突き合わせる。写像のモジュールと合わせたグラフに対して実行する。
+# 転移の証拠の CQ（証拠のモジュール 0.2.2）。調査が 2 つある。T1〜T3 と T5 は調査ごとに答える。T4 は 2 つの調査を合わせて「証拠が無い」を判定する。T6 は 2 つの調査を突き合わせる。写像のモジュールと合わせたグラフに対して実行する。
 # 行の見出しの記号を、この説明の中に書かない（分割に使う）。
 
 ### CQ-T1: 語ごとの要約 — 証拠の数、matched の平均、名前の合うラベルが最良のほかのラベルを上回る組の数、判定の内訳
@@ -29,7 +29,7 @@ SELECT ?dataset ?label ?term WHERE {
     FILTER NOT EXISTS { ?e a evd:TransferEvidence ; evd:sourceMapping|evd:targetMapping ?r }
 } ORDER BY ?dataset ?label
 
-### CQ-T5: 判定だけでは読み違える組 — NotSupported でないのに matched が 0.6 未満か、名前の合うラベルが最良のほかのラベルを 0.05 以上下回る組。および、NotSupported なのに matched が 0.8 以上の組（水準は高いが、近いラベルに負けた）
+### CQ-T5: 判定だけでは読み違える組 — Supported・Partial・Mixed なのに matched が 0.6 未満か、名前の合うラベルが最良のほかのラベルを 0.05 以上下回る組。および、NotSupported なのに matched が 0.8 以上の組（水準は高いが、近いラベルに負けた）
 SELECT ?study ?e ?m ?b ?v WHERE {
     ?e a evd:TransferEvidence ; evd:fromStudy ?study ; evd:matchedAuc ?m ; evd:bestOtherAuc ?b ; evd:preregisteredVerdict ?v .
     FILTER ( (?v IN (evd:Supported, evd:Partial, evd:Mixed) && (?m < 0.6 || ?b - ?m >= 0.05)) || (?v = evd:NotSupported && ?m >= 0.8) )

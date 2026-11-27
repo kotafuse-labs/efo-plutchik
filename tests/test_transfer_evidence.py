@@ -1,4 +1,4 @@
-"""転移の証拠のモジュール 0.2.1（CombineEFOMoE #88 → #90、#91 → #92）のテスト。学習不要・完全ローカル。"""
+"""転移の証拠のモジュール 0.2.2（CombineEFOMoE #88 → #90、#91 → #92）のテスト。学習不要・完全ローカル。"""
 import csv
 import hashlib
 import importlib.util
@@ -67,7 +67,8 @@ def _set(g, s, p, o):
 
 @pytest.mark.parametrize("name", ["other_term", "same_dataset", "verdict_mismatch", "auc_out_of_range", "rank_counts", "duplicate", "study_without_limits", "not_a_name_mapping",
                                   "untyped_node", "missing_study", "unknown_mapping", "few_positives", "rank3_over_seeds", "not_close_match", "ten_seeds", "empty_study_text",
-                                  "b_verdict_mismatch", "b_missing_training_positives", "b_few_training_positives_not_inconclusive", "unknown_study", "a_missing_rank3", "untyped_number_only"])
+                                  "b_verdict_mismatch", "b_missing_training_positives", "b_few_training_positives_not_inconclusive", "unknown_study", "a_missing_rank3", "untyped_number_only",
+                                  "b_rank1_over_seeds", "rank_auc_contradiction", "a_few_negatives"])
 def test_negative_examples_are_rejected(graph, name):
     g = _copy(graph)
     if name == "other_term":
@@ -98,6 +99,13 @@ def test_negative_examples_are_rejected(graph, name):
         for p, o in graph.predicate_objects(EVD.CrossDatasetTransfer2026b):
             g.add((s3, p, o))
         _set(g, E2, EVD.fromStudy, s3)
+    elif name == "b_rank1_over_seeds":                      # 0.8.2: 再実行の証拠は rankThreeSeeds を持たないので、上限が無かった
+        _set(g, E2, EVD.rankOneSeeds, Literal(99, datatype=XSD.integer))
+    elif name == "rank_auc_contradiction":                  # 0.8.2: 全 seed で 1 位なのに、matched が最良のほかのラベルより低い
+        e = sorted(x for x in graph.subjects(EVD.fromStudy, EVD.CrossDatasetTransfer2026) if int(graph.value(x, EVD.rankOneSeeds)) == 5)[0]
+        _set(g, e, EVD.matchedAuc, Literal(Decimal("0.0100"), datatype=XSD.decimal))
+    elif name == "a_few_negatives":                         # 0.8.2: 陰性が 20 未満
+        _set(g, E1, EVD.targetPositives, Literal(int(graph.value(E1, EVD.targetRows)) - 5, datatype=XSD.integer))
     elif name == "a_missing_rank3":
         g.remove((E1, EVD.rankThreeSeeds, None))
     elif name == "untyped_number_only":

@@ -21,6 +21,7 @@ evd:TransferEvidenceShape a sh:NodeShape ;
     sh:property [ sh:path evd:seedCount ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 5 ; sh:maxInclusive 5 ;
                   sh:message "The pre-registered verdict is defined for five seeds only."@en ] ;
     sh:property [ sh:path evd:rankOneSeeds ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 0 ; sh:lessThanOrEquals evd:rankThreeSeeds ] ;
+    sh:property [ sh:path evd:rankOneSeeds ; sh:lessThanOrEquals evd:seedCount ] ;     # 再実行の証拠は rankThreeSeeds を持たないので、seed の数とも直接比べる（0.8.2）
     sh:property [ sh:path evd:rankThreeSeeds ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 0 ; sh:lessThanOrEquals evd:seedCount ] ;
     sh:property [ sh:path evd:sourceLabelCount ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 2 ] ;
     sh:property [ sh:path evd:targetPositives ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 20 ; sh:lessThan evd:targetRows ] ;
@@ -61,6 +62,19 @@ evd:TransferEvidenceShape a sh:NodeShape ;
                 BIND (IF(BOUND(?tp) && ?tp < 50, evd:Inconclusive, IF(?r1 >= 4 && ?m >= 0.6, evd:Supported, IF(?m <= ?b, evd:NotSupported, evd:Mixed))) AS ?want)
                 FILTER (!BOUND(?tp) || ?v != ?want)
             }""" ] ;
+    sh:sparql [
+        sh:message "The seed counts and the AUCs must not contradict each other: ranked first in every seed implies matched AUC >= best other AUC; ranked first in no seed implies matched AUC < best other AUC (the best other AUC is the mean over seeds of the per-seed maximum)."@en ;
+        sh:select """
+            PREFIX evd: <https://w3id.org/efo-plutchik/mapping/evidence#>
+            SELECT $this WHERE {
+                $this evd:rankOneSeeds ?r1 ; evd:seedCount ?n ; evd:matchedAuc ?m ; evd:bestOtherAuc ?b .
+                FILTER ( (?r1 = ?n && ?m < ?b) || (?r1 = 0 && ?m >= ?b) )
+            }""" ] ;
+    sh:sparql [
+        sh:message "Where the number of target rows is given, at least 20 of them must be negatives."@en ;
+        sh:select """
+            PREFIX evd: <https://w3id.org/efo-plutchik/mapping/evidence#>
+            SELECT $this WHERE { $this evd:targetRows ?rows ; evd:targetPositives ?pos . FILTER (?rows - ?pos < 20) }""" ] ;
     sh:sparql [
         sh:message "A transfer evidence must come from a study whose verdict rule is known to these shapes."@en ;
         sh:select """
