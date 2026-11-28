@@ -10,14 +10,15 @@ evd:TransferEvidenceShape a sh:NodeShape ;
     sh:targetClass evd:TransferEvidence ;
     # 型を持たないノードも対象にする（証拠の述語を 1 つでも持てば、証拠として検査する）。
     sh:targetSubjectsOf evd:sourceMapping , evd:targetMapping , evd:matchedAuc , evd:bestOtherAuc , evd:preregisteredVerdict , evd:fromStudy ,
-        evd:nativeAuc , evd:rankOneSeeds , evd:rankThreeSeeds , evd:seedCount , evd:sourceLabelCount , evd:targetPositives , evd:targetRows , evd:nativePositives , evd:sourceTrainingPositives ;
+        evd:nativeAuc , evd:rankOneSeeds , evd:rankThreeSeeds , evd:seedCount , evd:sourceLabelCount , evd:targetPositives , evd:targetRows , evd:nativePositives , evd:sourceTrainingPositives ,
+        evd:bestOtherBasicAuc , evd:mostFrequentBestOtherBasicMapping ;
     sh:class evd:TransferEvidence ;
     sh:property [ sh:path evd:fromStudy ; sh:minCount 1 ; sh:maxCount 1 ; sh:class evd:EvidenceStudy ] ;
     sh:property [ sh:path evd:sourceMapping ; sh:minCount 1 ; sh:maxCount 1 ; sh:class map:ConceptMapping ] ;
     sh:property [ sh:path evd:targetMapping ; sh:minCount 1 ; sh:maxCount 1 ; sh:class map:ConceptMapping ] ;
     sh:property [ sh:path evd:matchedAuc ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:decimal ; sh:minInclusive 0 ; sh:maxInclusive 1 ] ;
     sh:property [ sh:path evd:bestOtherAuc ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:decimal ; sh:minInclusive 0 ; sh:maxInclusive 1 ] ;
-    sh:property [ sh:path evd:nativeAuc ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:decimal ; sh:minInclusive 0 ; sh:maxInclusive 1 ] ;
+    sh:property [ sh:path evd:nativeAuc ; sh:maxCount 1 ; sh:datatype xsd:decimal ; sh:minInclusive 0 ; sh:maxInclusive 1 ] ;
     sh:property [ sh:path evd:seedCount ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 5 ; sh:maxInclusive 5 ;
                   sh:message "The pre-registered verdict is defined for five seeds only."@en ] ;
     sh:property [ sh:path evd:rankOneSeeds ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 0 ; sh:lessThanOrEquals evd:rankThreeSeeds ] ;
@@ -29,6 +30,60 @@ evd:TransferEvidenceShape a sh:NodeShape ;
     sh:property [ sh:path evd:sourceTrainingPositives ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 1 ] ;
     sh:property [ sh:path evd:nativePositives ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:integer ; sh:minInclusive 1 ] ;
     sh:property [ sh:path evd:preregisteredVerdict ; sh:minCount 1 ; sh:maxCount 1 ; sh:in ( evd:Supported evd:Partial evd:NotSupported evd:Mixed evd:Inconclusive ) ] ;
+    # 0.3.0: 別の基本感情のラベルとの比較（3 つめの調査から）。対抗の集合が小さいので、最良のほかのラベルの AUC を超えない。
+    sh:property [ sh:path evd:bestOtherBasicAuc ; sh:maxCount 1 ; sh:datatype xsd:decimal ; sh:minInclusive 0 ; sh:maxInclusive 1 ; sh:lessThanOrEquals evd:bestOtherAuc ] ;
+    sh:property [ sh:path evd:mostFrequentBestOtherBasicMapping ; sh:maxCount 1 ; sh:class map:ConceptMapping ] ;
+    sh:sparql [
+        sh:message "The native AUC may be missing only in study CrossDatasetTransfer2026c, and there it is missing exactly when the target label has fewer than 5 positive rows in its test split."@en ;
+        sh:select """
+            PREFIX evd: <https://w3id.org/efo-plutchik/mapping/evidence#>
+            SELECT $this WHERE {
+                $this evd:fromStudy ?st . OPTIONAL { $this evd:nativePositives ?np } OPTIONAL { $this evd:nativeAuc ?x }
+                FILTER ( ( !BOUND(?x) && ( ?st != evd:CrossDatasetTransfer2026c || !BOUND(?np) || ?np >= 5 ) )
+                      || ( BOUND(?x) && ?st = evd:CrossDatasetTransfer2026c && BOUND(?np) && ?np < 5 ) )
+            }""" ] ;
+    sh:sparql [                                              # 0.3.0（独立監査の反映）: 調査ごとの範囲。3 つめの調査は、少なくとも一方が 0.7.0 で足した 9 データセットの組だけ。最初の 2 つは、その 9 個を使わない
+        sh:message "Study CrossDatasetTransfer2026c records only pairs in which the source or the target dataset is one of the 9 datasets added in mapping module 0.7.0; the two earlier studies record no pair with one of them."@en ;
+        sh:select """
+            PREFIX evd: <https://w3id.org/efo-plutchik/mapping/evidence#>
+            PREFIX map: <https://w3id.org/efo-plutchik/mapping#>
+            SELECT $this WHERE {
+                $this evd:fromStudy ?st ; evd:sourceMapping ?s ; evd:targetMapping ?t . ?s map:dataset ?ds . ?t map:dataset ?dt .
+                BIND ( ( str(?ds) IN ("isear", "cbet", "carer", "tec", "meld", "rwwd", "senwave", "stockemotions", "universaljoy") || str(?dt) IN ("isear", "cbet", "carer", "tec", "meld", "rwwd", "senwave", "stockemotions", "universaljoy") ) AS ?new )
+                FILTER ( ( ?st = evd:CrossDatasetTransfer2026c && !?new ) || ( ?st IN (evd:CrossDatasetTransfer2026, evd:CrossDatasetTransfer2026b) && ?new ) )
+            }""" ] ;
+    sh:sparql [
+        sh:message "Rank-three seeds are recorded only in study CrossDatasetTransfer2026 (the later verdict rule does not use them)."@en ;
+        sh:select """
+            PREFIX evd: <https://w3id.org/efo-plutchik/mapping/evidence#>
+            SELECT $this WHERE { $this evd:rankThreeSeeds ?r ; evd:fromStudy ?st . FILTER ( ?st != evd:CrossDatasetTransfer2026 ) }""" ] ;
+    sh:sparql [
+        sh:message "The best other basic-emotion AUC and its most frequent mapping go together, are recorded only for study CrossDatasetTransfer2026c and for basic-emotion terms, and the mapping must be a name-based close match of the source dataset to another basic emotion."@en ;
+        sh:select """
+            PREFIX evd: <https://w3id.org/efo-plutchik/mapping/evidence#>
+            PREFIX map: <https://w3id.org/efo-plutchik/mapping#>
+            PREFIX plu: <https://w3id.org/efo-plutchik#>
+            PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+            SELECT $this WHERE {
+                { $this evd:bestOtherBasicAuc ?x } UNION { $this evd:mostFrequentBestOtherBasicMapping ?y }
+                OPTIONAL { $this evd:fromStudy ?st } OPTIONAL { $this evd:sourceMapping ?s . ?s map:mapsTo ?term ; map:dataset ?ds }
+                OPTIONAL { $this evd:bestOtherBasicAuc ?auc } OPTIONAL { $this evd:mostFrequentBestOtherBasicMapping ?r }
+                FILTER ( !BOUND(?auc) || !BOUND(?r) || !BOUND(?st) || ?st != evd:CrossDatasetTransfer2026c || !BOUND(?term)
+                      || NOT EXISTS { ?term a plu:BasicEmotion }
+                      || NOT EXISTS { ?r map:dataset ?ds ; map:mapsTo ?other ; map:inScheme map:Plutchik2001Names ; map:matchType skos:closeMatch . ?other a plu:BasicEmotion . FILTER (?other != ?term) } )
+            }""" ] ;
+    sh:sparql [
+        sh:message "Study CrossDatasetTransfer2026c: a basic-emotion pair whose source dataset has a name-based close match to another basic emotion must record the best other basic-emotion AUC."@en ;
+        sh:select """
+            PREFIX evd: <https://w3id.org/efo-plutchik/mapping/evidence#>
+            PREFIX map: <https://w3id.org/efo-plutchik/mapping#>
+            PREFIX plu: <https://w3id.org/efo-plutchik#>
+            PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+            SELECT $this WHERE {
+                $this evd:fromStudy evd:CrossDatasetTransfer2026c ; evd:sourceMapping ?s . ?s map:mapsTo ?term ; map:dataset ?ds . ?term a plu:BasicEmotion .
+                ?r map:dataset ?ds ; map:mapsTo ?other ; map:inScheme map:Plutchik2001Names ; map:matchType skos:closeMatch . ?other a plu:BasicEmotion . FILTER (?other != ?term)
+                FILTER NOT EXISTS { $this evd:bestOtherBasicAuc ?x }
+            }""" ] ;
     sh:sparql [
         sh:message "The two mapping records of a transfer evidence must be name-based close matches to the same Plutchik term, from two different datasets."@en ;
         sh:select """
@@ -53,11 +108,12 @@ evd:TransferEvidenceShape a sh:NodeShape ;
                 FILTER (!BOUND(?r3) || !BOUND(?rows) || ?v != ?want)
             }""" ] ;
     sh:sparql [
-        sh:message "Study CrossDatasetTransfer2026b: the verdict must follow from the recorded numbers (Inconclusive: fewer than 50 source training positives; else Supported: rank one in at least 4 of 5 seeds and matched AUC at least 0.6; else NotSupported: matched AUC not above the best other AUC; else Mixed), and the source training positives must be given."@en ;
+        sh:message "Studies CrossDatasetTransfer2026b and CrossDatasetTransfer2026c: the verdict must follow from the recorded numbers (Inconclusive: fewer than 50 source training positives; else Supported: rank one in at least 4 of 5 seeds and matched AUC at least 0.6; else NotSupported: matched AUC not above the best other AUC; else Mixed), and the source training positives must be given."@en ;
         sh:select """
             PREFIX evd: <https://w3id.org/efo-plutchik/mapping/evidence#>
             SELECT $this WHERE {
-                $this evd:fromStudy evd:CrossDatasetTransfer2026b ; evd:rankOneSeeds ?r1 ; evd:matchedAuc ?m ; evd:bestOtherAuc ?b ; evd:preregisteredVerdict ?v .
+                $this evd:fromStudy ?st ; evd:rankOneSeeds ?r1 ; evd:matchedAuc ?m ; evd:bestOtherAuc ?b ; evd:preregisteredVerdict ?v .
+                FILTER (?st IN (evd:CrossDatasetTransfer2026b, evd:CrossDatasetTransfer2026c))
                 OPTIONAL { $this evd:sourceTrainingPositives ?tp }
                 BIND (IF(BOUND(?tp) && ?tp < 50, evd:Inconclusive, IF(?r1 >= 4 && ?m >= 0.6, evd:Supported, IF(?m <= ?b, evd:NotSupported, evd:Mixed))) AS ?want)
                 FILTER (!BOUND(?tp) || ?v != ?want)
@@ -79,7 +135,7 @@ evd:TransferEvidenceShape a sh:NodeShape ;
         sh:message "A transfer evidence must come from a study whose verdict rule is known to these shapes."@en ;
         sh:select """
             PREFIX evd: <https://w3id.org/efo-plutchik/mapping/evidence#>
-            SELECT $this WHERE { $this evd:fromStudy ?st . FILTER (?st NOT IN (evd:CrossDatasetTransfer2026, evd:CrossDatasetTransfer2026b)) }""" ] ;
+            SELECT $this WHERE { $this evd:fromStudy ?st . FILTER (?st NOT IN (evd:CrossDatasetTransfer2026, evd:CrossDatasetTransfer2026b, evd:CrossDatasetTransfer2026c)) }""" ] ;
     sh:sparql [
         sh:message "There must be at most one transfer evidence per study and ordered pair of mapping records."@en ;
         sh:select """

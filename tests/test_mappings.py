@@ -116,7 +116,7 @@ def test_mapping_cqs_answer_and_completeness_holds():
     assert r["CQ-M2"] == [] and r["CQ-M3"] == []
     labels = {(row[1], row[2]) for row in r["CQ-M1"]}
     assert len({x for x in labels if x[0] in ("goemotions", "semeval2018")}) == 28 + 11   # GoEmotions 28 + SemEval 11 のラベルすべてが辿れる
-    assert len(labels) == 28 + 11 + 119                             # 追加の 10 データセットのラベル 119 個（CombineEFOMoE #85）
+    assert len(labels) == 28 + 11 + 119 + 70                        # 追加の 10 データセットのラベル 119 個（CombineEFOMoE #85）と、0.7.0 の 9 データセットの 70 個（#102）
     assert {(row[1], row[2].split("#")[1], row[3]) for row in r["CQ-M5"]} == _M5_EXPECTED
     assert all(row[0] == "goemotions" for row in r["CQ-M5"])         # SemEval は 2 方式で食い違わない
 
@@ -148,6 +148,21 @@ def test_extra_dataset_counts():
     assert sum(a + b for a, b in expect.values()) == 119
 
 
+def test_transfer_replication_dataset_counts():
+    """0.7.0（CombineEFOMoE #100 → #102）で足した 9 データセット: 規則と語形の表は変えていない。closeMatch 51、写さないラベル 19。"""
+    g = _mapping_graph()
+    expect = {"isear": (7, 0), "cbet": (8, 1), "carer": (6, 0), "tec": (6, 0), "meld": (6, 1), "rwwd": (5, 3), "senwave": (3, 7), "stockemotions": (5, 7), "universaljoy": (5, 0)}
+    for ds, (close, un) in expect.items():
+        assert (_count(g, ds, SKOS.closeMatch), _count(g, ds, SKOS.broadMatch), _count(g, ds, unmapped=True)) == (close, 0, un), ds
+    assert (sum(a for a, _ in expect.values()), sum(b for _, b in expect.values())) == (51, 19)
+    assert len(list(g.subjects(RDF.type, MAP.NameVariantRule))) == 16                                    # 語形の表は 0.6.1 のまま
+    for lab in ("optimistic", "pessimistic", "thankful"):                                               # 表に無い語形は写さない
+        assert (MAP[f"pn_senwave_{lab}"], RDF.type, MAP.UnmappedLabel) in g
+    assert (MAP["pn_rwwd_happiness"], RDF.type, MAP.UnmappedLabel) in g
+    assert {str(o).split("#")[1] for ds in ("cbet", "carer", "tec") for o in g.objects(MAP[f"{ds}_labels"], MAP.labellingMethod)} == {"DistantlySupervised"}
+    assert (MAP.DistantlySupervised, RDF.type, MAP.LabellingMethod) in g
+
+
 def test_name_variants_and_unmapped_reasons():
     g = _mapping_graph()
     r = MAP["pn_empatheticdialogues_terrified"]
@@ -168,7 +183,7 @@ def test_scheme_scope_and_dataset_metadata():
     """Lim & Cheong の方式は 2 データセットだけが対象。追加のデータセットは、付け方・出典・確認元を持つ。"""
     g = _mapping_graph()
     assert {str(o).split("#")[1] for o in g.objects(MAP.LimCheong2024, MAP.coversDataset)} == {"semeval2018_labels", "goemotions_labels"}
-    assert len(list(g.objects(MAP.Plutchik2001Names, MAP.coversDataset))) == 12
+    assert len(list(g.objects(MAP.Plutchik2001Names, MAP.coversDataset))) == 21
     assert not [r for r in g.subjects(MAP.inScheme, MAP.LimCheong2024) if str(g.value(r, MAP.dataset)) not in ("semeval2018", "goemotions")]
     assert g.value(MAP["empatheticdialogues_labels"], MAP.labellingMethod) == MAP.WriterChosen
     assert g.value(MAP["semeval2018_eioc_labels"], MAP.labellingMethod) == MAP.ScoreThresholded
@@ -195,9 +210,9 @@ def test_coverage_cqs_by_labelling_method():
     missing = {row[1].split("#")[1] for row in r["CQ-M7"]}
     assert {"Awe", "Contempt", "Submission", "Aggressiveness", "Rage", "Terror", "Ecstasy"} <= missing
     assert not ({"Anger", "Joy", "Love", "Optimism", "Pessimism", "Annoyance", "Admiration", "Pride", "Guilt", "Shame", "Grief", "Remorse", "Curiosity"} & missing)
-    assert len(missing) == 25                                        # 48 語のうち 23 語に、読み手の注釈で名前が対応するラベルがある
+    assert len(missing) == 24                                        # 48 語のうち 24 語に、読み手の注釈で名前が対応するラベルがある（0.7.0 で Anxiety が加わった: SenWave と StockEmotions）
     writer_only = {row[0].split("#")[1] for row in r["CQ-M6"] if int(row[2]) == 0 and int(row[3]) > 0}
-    assert writer_only == {"Anxiety", "Apprehension", "Boredom", "Hope", "Sentimentality", "Terror"}
+    assert writer_only == {"Apprehension", "Boredom", "Hope", "Sentimentality", "Terror"}
 
 
 def _bad(edit):
@@ -240,11 +255,11 @@ def test_record_and_concept_integrity():
 
 
 def test_no_licence_strings_and_version():
-    """利用条件は記録しない（配布元を見る）。写像のモジュールは 0.6.0 で、コア 0.5.0 を import する。"""
+    """利用条件は記録しない（配布元を見る）。写像のモジュールは 0.7.0 で、コア 0.5.0 を import する。"""
     from rdflib.namespace import DCTERMS, OWL
     from rdflib import URIRef
     g = _mapping_graph()
     assert not [1 for cs in g.subjects(RDF.type, SKOS.ConceptScheme) for _ in g.objects(cs, DCTERMS.rights)]
     onto = URIRef("https://w3id.org/efo-plutchik/mapping")
-    assert str(g.value(onto, OWL.versionInfo)) == "0.6.1" and g.value(onto, OWL.imports) == URIRef("https://w3id.org/efo-plutchik/0.5.0")
+    assert str(g.value(onto, OWL.versionInfo)) == "0.7.0" and g.value(onto, OWL.imports) == URIRef("https://w3id.org/efo-plutchik/0.5.0")
 

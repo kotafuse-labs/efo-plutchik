@@ -1,0 +1,26 @@
+{
+ "experiment": "CombineEFOMoE issues #100 and #101",
+ "mapping_module_version": "0.7.0",
+ "mapping_note": "The experiment used mapping module 0.6.1 for the 10 earlier datasets and applied its rule to the 9 new datasets; module 0.7.0 records those 9 datasets with the same result.",
+ "seeds": [
+  47,
+  48,
+  49,
+  50,
+  51
+ ],
+ "n_pairs": 1029,
+ "auc_decimals": 6,
+ "inputs": {
+  "crossdata_transfer_v4.json": "e52c6d496d5bf593b0dbc25604f9c64b05dcb619a7a26a25d9ad7178630a113a",
+  "crossdata_basic_rivals.json": "96d8d960eeba1877d0e271586c58a7d79278eeb06ae0d37cb0dbcde0fd305f26"
+ },
+ "scripts": {
+  "scripts/prepare_crossdata_extra.py": "5e79e9b85b81ff3fbf7298b60da8262220334444c1bc35c2d097688635f2bd7c",
+  "scripts/train_crossdata_transfer_v4.py": "c5b32a8cd26845b96d321d77e6ef46d066d47bfad278004d1825d6b714bf03dc",
+  "scripts/train_crossdata_transfer_v2.py": "fc8dc8591e389600ee52cff3e36ae00d57e42de57e1ef7dc1535bf407d9c9737",
+  "scripts/eval_crossdata_transfer_v4.py": "199b46ed14832b2f6d2918f07fa424980654bc9fd661677057e49a2d39d3e187",
+  "scripts/eval_crossdata_basic_rivals.py": "dd68796237576e1910a39f8f89f8c8a6a2af6de63605b0be15ce69d232fccff5",
+  "scripts/export_transfer_evidence_csv_v4.py": "4a5f769be43a1f2512039e12a7338a4db3fcc20fb100fe7b481fc9a44a839c02"
+ }
+}

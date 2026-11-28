@@ -1,4 +1,4 @@
-"""データセットのラベル → EFO-Plutchik の写像（写像のモジュール 0.6.1。コアのオントロジーは 0.5.0 のまま）を生成する。出力: ontology/plutchik-mappings.ttl
+"""データセットのラベル → EFO-Plutchik の写像（写像のモジュール 0.7.0。コアのオントロジーは 0.5.0 のまま）を生成する。出力: ontology/plutchik-mappings.ttl
 
 2 つの写像方式を並べて持つ（CombineEFOMoE Issue #33）。
 - map:LimCheong2024（再現用）: Lim & Cheong (EMNLP 2024) Table 1 / 2。ラベルを 1〜2 個の基本感情の成分に写す。
@@ -15,6 +15,7 @@
     1b. ラベルが、Plutchik (2001) の語の形容詞・分詞の形として NAME_VARIANTS の表に載っている → skos:closeMatch
         （map:nameVariantOf に元の語を記録する。表に無い語形・類義語は写さない）。
     4. 複数の語を "or" でつないだラベル、限定のついたラベル（negative surprise など）、感情でないラベルは写さない（理由つき）。
+  0.7.0（CombineEFOMoE #100 → #102）で 9 データセットを足した。規則と NAME_VARIANTS の表は 0.6.1 のまま（足していない）。ラベルの付け方に map:DistantlySupervised を足した。
   追加のデータセットは map:Plutchik2001Names だけが対象で、map:LimCheong2024 は SemEval-2018 E-c と GoEmotions だけを対象にする
   （方式ごとの対象は map:coversDataset）。ラベルの付け方（読み手の注釈・書き手の選択・得点の区切り）を map:labellingMethod に記録する。
   データの本文は扱わない（ラベルの名前と出典だけ）。
@@ -75,7 +76,7 @@ DATASET_LABEL = {"semeval2018": ("SemEval-2018 Task 1 E-c", "SemEval-2018 Task 1
 # ---- CombineEFOMoE #85: 追加のデータセット。ラベルの名前は 2026-11-25〜26 に論文・質問票・配布物の説明で確認した（checked に、どこで確認したかを書く）。
 # データファイルの中の値まで確認したのは SemEval-2018 EI-oc・Electoral Tweets・GoodNewsEveryone（0.6.1）。利用条件は記録しない（配布元の dcterms:source を見ること）。----
 # method: ReaderAnnotated（読み手が付けた）/ WriterChosen（書き手に与えられた、または書き手が選んだ）/ ScoreThresholded（得点を区切った）
-READER, WRITER, SCORE = "ReaderAnnotated", "WriterChosen", "ScoreThresholded"
+READER, WRITER, SCORE, DISTANT = "ReaderAnnotated", "WriterChosen", "ScoreThresholded", "DistantlySupervised"
 PLUTCHIK8 = ["anger", "anticipation", "disgust", "fear", "joy", "sadness", "surprise", "trust"]
 EXTRA = {
     "empatheticdialogues": {
@@ -145,6 +146,64 @@ EXTRA = {
         "source": "https://saifmohammad.com/WebDocs/ElectoralTweetsData.zip",
         "checked": "Annotation questionnaire in the data archive (19 options, 7 of them composite). The data files write one option with two spaces ('anticipation or  expectancy or interest'); the questionnaire spelling is used here. The paper itself was not read."},
 }
+# ---- CombineEFOMoE #100 → #102（0.7.0）: 転移の追試で使った 9 データセット。ラベルの名前は、2026-11-27 に取得した配布物の値で確認した（どのファイルかは checked）。
+# キーは実験のキーと同じ。規則と NAME_VARIANTS は変えていない。利用の条件は記録しない（配布元を見ること）。----
+EXTRA.update({
+    "isear": {
+        "name": ("ISEAR", "ISEAR のラベル"), "method": WRITER, "cardinality": "single", "intensity": None,
+        "labels": ["anger", "disgust", "fear", "guilt", "joy", "sadness", "shame"],
+        "cite": "Scherer, K. R. and Wallbott, H. G. (1994). Evidence for universality and differential patterning of emotional response. Journal of Personality and Social Psychology 66(2), 310-328.",
+        "source": "https://github.com/sinmaniphel/py_isear_dataset",
+        "checked": "Label values in a secondary copy of the data (isear.csv from github.com/sinmaniphel/py_isear_dataset, column Field1), retrieved 2026-11-27. The source given here is that copy, not the original distribution. The original distribution was not checked."},
+    "cbet": {
+        "name": ("CBET", "CBET のラベル"), "method": DISTANT, "cardinality": "multi", "intensity": None,
+        "labels": ["anger", "disgust", "fear", "guilt", "joy", "love", "sadness", "surprise", "thankfulness"],
+        "cite": "Shahraki, A. G. and Zaiane, O. R. (2017). Lexical and learning-based emotion mining from text. CICLing 2017.",
+        "source": "https://github.com/chenyangh/CBET-dataset",
+        "checked": "Column names of the released file (CBET.csv), retrieved 2026-11-27. Labels come from hashtags in tweets."},
+    "carer": {
+        "name": ("CARER (dair-ai/emotion)", "CARER（dair-ai/emotion）のラベル"), "method": DISTANT, "cardinality": "single", "intensity": None,
+        "labels": ["anger", "fear", "joy", "love", "sadness", "surprise"],
+        "cite": "Saravia, E., Liu, H.-C. T., Huang, Y.-H., Wu, J. and Chen, Y.-S. (2018). CARER: Contextualized Affect Representations for Emotion Recognition. EMNLP 2018, 3687-3697.",
+        "source": "https://huggingface.co/datasets/dair-ai/emotion",
+        "checked": "Label names in the metadata of the released files (split configuration), retrieved 2026-11-27. The paper builds labels from hashtags; how the six-label release was derived from it is not documented in the dataset card."},
+    "tec": {
+        "name": ("Twitter Emotion Corpus (TEC)", "Twitter Emotion Corpus（TEC）のラベル"), "method": DISTANT, "cardinality": "single", "intensity": None,
+        "labels": ["anger", "disgust", "fear", "joy", "sadness", "surprise"],
+        "cite": "Mohammad, S. M. (2012). #Emotional Tweets. *SEM 2012, 246-255.",
+        "source": "http://saifmohammad.com/WebDocs/Jan9-2012-tweets-clean.txt.zip",
+        "checked": "Label values in the released file (Jan9-2012-tweets-clean.txt), retrieved 2026-11-27. Labels come from hashtags at the end of tweets."},
+    "meld": {
+        "name": ("MELD", "MELD のラベル"), "method": READER, "cardinality": "single", "intensity": None,
+        "labels": ["anger", "disgust", "fear", "joy", "neutral", "sadness", "surprise"],
+        "cite": "Poria, S., Hazarika, D., Majumder, N., Naik, G., Cambria, E. and Mihalcea, R. (2019). MELD: A Multimodal Multi-Party Dataset for Emotion Recognition in Conversations. ACL 2019, 527-536.",
+        "source": "https://github.com/declare-lab/MELD",
+        "checked": "Values of the Emotion column in the released files (train / dev / test _sent_emo.csv), retrieved 2026-11-27."},
+    "rwwd": {
+        "name": ("Real World Worry Dataset", "Real World Worry Dataset のラベル"), "method": WRITER, "cardinality": "single (the emotion chosen as best describing the writer's feeling)", "intensity": None,
+        "labels": ["anger", "anxiety", "desire", "disgust", "fear", "happiness", "relaxation", "sadness"],
+        "cite": "Kleinberg, B., van der Vegt, I. and Mozes, M. (2020). Measuring Emotions in the COVID-19 Real World Worry Dataset. NLP-COVID19 Workshop at ACL 2020.",
+        "source": "https://github.com/ben-aaron188/covid19worry",
+        "checked": "Values of the chosen_emotion column in the released file (rwwd_full.csv), retrieved 2026-11-27, written in lower case here. The writers also rated each emotion on a scale; that scale is not recorded here."},
+    "senwave": {
+        "name": ("SenWave (English)", "SenWave（英語）のラベル"), "method": READER, "cardinality": "multi", "intensity": None,
+        "labels": ["annoyed", "anxious", "denial", "empathetic", "joking", "official report", "optimistic", "pessimistic", "sad", "thankful"],
+        "cite": "Yang, Q., Alamro, H., Albaradei, S., Salhi, A., Lv, X., Ma, C., Alshehri, M., Jaber, I., Tifratene, F., Wang, W., Gojobori, T., Duarte, C. M., Gao, X. and Zhang, X. (2020). SenWave: Monitoring the Global Sentiments under the COVID-19 Pandemic. arXiv:2006.10842.",
+        "source": "https://github.com/gitdevqiang/SenWave",
+        "checked": "Column names of the released file (labeledEn.csv), retrieved 2026-11-27, written in lower case here. The forms 'optimistic', 'pessimistic' and 'thankful' are not listed name variants and are not mapped."},
+    "stockemotions": {
+        "name": ("StockEmotions", "StockEmotions のラベル"), "method": READER, "cardinality": "single", "intensity": None,
+        "labels": ["ambiguous", "amusement", "anger", "anxiety", "belief", "confusion", "depression", "disgust", "excitement", "optimism", "panic", "surprise"],
+        "cite": "Lee, J., Youn, H. L., Poon, J. and Han, S. C. (2023). StockEmotions: Discover Investor Emotions for Financial Sentiment Analysis and Multivariate Time Series. AAAI 2023 Bridge on AI for Financial Services.",
+        "source": "https://github.com/adlnlp/StockEmotions",
+        "checked": "Values of the emo_label column in the released files (train / val / test _stockemo.csv), retrieved 2026-11-27. According to the paper, most labels were produced by a model and then checked by people; recorded as reader-annotated."},
+    "universaljoy": {
+        "name": ("Universal Joy (English)", "Universal Joy（英語）のラベル"), "method": WRITER, "cardinality": "single", "intensity": None,
+        "labels": ["anger", "anticipation", "fear", "joy", "sadness"],
+        "cite": "Lamprinidis, S., Bianchi, F., Hardt, D. and Hovy, D. (2021). Universal Joy: A Data Set and Results for Classifying Emotions Across Languages. WASSA 2021, 62-75.",
+        "source": "https://github.com/sotlampr/universal-joy",
+        "checked": "Values of the emotion column for the English rows of the released files (large.csv, val.csv, test.csv), retrieved 2026-11-27. Labels come from the feeling tag the writer attached to a public Facebook post."},
+})
 # 規則 1b: 形容詞・分詞の形 → Plutchik (2001) の語（表に無い語形と類義語は写さない）
 NAME_VARIANTS = {"angry": "anger", "annoyed": "annoyance", "anticipating": "anticipation", "anxious": "anxiety", "apprehensive": "apprehension",
                  "ashamed": "shame", "disgusted": "disgust", "guilty": "guilt", "hopeful": "hope", "joyful": "joy", "proud": "pride", "sad": "sadness",
@@ -243,8 +302,8 @@ def build(core_path=os.path.join(HERE, "efo-plutchik.ttl")) -> Graph:
     g.add((onto, RDF.type, OWL.Ontology))
     g.add((onto, RDFS.label, Literal("EFO-Plutchik dataset label mappings", lang="en")))
     g.add((onto, RDFS.label, Literal("EFO-Plutchik のデータセットラベル写像", lang="ja")))
-    g.add((onto, OWL.versionInfo, Literal("0.6.1")))
-    g.add((onto, RDFS.comment, Literal("Mapping module 0.6.1 (12 datasets, labelling methods, name-variant rules). It imports the core ontology 0.5.0, which is unchanged.", lang="en")))
+    g.add((onto, OWL.versionInfo, Literal("0.7.0")))
+    g.add((onto, RDFS.comment, Literal("Mapping module 0.7.0 (21 datasets, labelling methods, name-variant rules). It imports the core ontology 0.5.0, which is unchanged.", lang="en")))
     g.add((onto, OWL.imports, URIRef("https://w3id.org/efo-plutchik/0.5.0")))
     g.add((onto, DCTERMS.license, URIRef("https://creativecommons.org/licenses/by/4.0/")))
     g.add((onto, RDFS.comment, Literal("Generated by ontology/build_mappings.py; edit the script, not this file.", lang="en")))
@@ -278,6 +337,7 @@ def build(core_path=os.path.join(HERE, "efo-plutchik.ttl")) -> Graph:
         (READER, "reader-annotated", "読み手の注釈", "Labels assigned by readers of the text (crowd workers, students or experts).", "本文の読み手（クラウドワーカー・学生・専門家）が付けたラベル。"),
         (WRITER, "writer-chosen", "書き手の選択", "Labels given to or chosen by the writer, who then wrote the text for that label.", "書き手に与えられた、または書き手が選んだラベル。本文はそのラベルに合わせて書かれた。"),
         (SCORE, "score-thresholded", "得点の区切り", "Classes obtained by cutting a continuous human-derived score into bands.", "人手に由来する連続の得点を区切って作ったクラス。"),
+        (DISTANT, "distantly supervised", "遠隔の教師", "Labels derived automatically from a cue in the text, such as an emotion-word hashtag attached by the writer; no person assigned the label to the instance as an annotation.", "本文の中の手がかり（書き手が付けた感情語の hashtag など）から自動で作ったラベル。人が事例ごとに注釈として付けたものではない。"),
     ]:
         term(MAP[k], OWL.NamedIndividual, en, ja, den, dja)
         g.add((MAP[k], RDF.type, MAP.LabellingMethod))
@@ -372,7 +432,7 @@ def build(core_path=os.path.join(HERE, "efo-plutchik.ttl")) -> Graph:
 
 if __name__ == "__main__":
     g = build()
-    header = ("# EFO-Plutchik のデータセットラベル写像（写像のモジュール 0.6.1。コアのオントロジーは 0.5.0 のまま）。ontology/build_mappings.py が生成する（直接編集しない）。\n"
-              "# 方式 2 つ: map:LimCheong2024（再現用、成分写像。2 データセット）/ map:Plutchik2001Names（名前に基づく、強度・dyad まで。12 データセット）。\n")
+    header = ("# EFO-Plutchik のデータセットラベル写像（写像のモジュール 0.7.0。コアのオントロジーは 0.5.0 のまま）。ontology/build_mappings.py が生成する（直接編集しない）。\n"
+              "# 方式 2 つ: map:LimCheong2024（再現用、成分写像。2 データセット）/ map:Plutchik2001Names（名前に基づく、強度・dyad まで。21 データセット）。\n")
     open(OUT, "w", encoding="utf-8").write(header + g.serialize(format="turtle"))
     print(f"wrote {OUT} ({len(g)} triples)")

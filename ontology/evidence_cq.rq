@@ -1,4 +1,4 @@
-# 転移の証拠の CQ（証拠のモジュール 0.2.2）。調査が 2 つある。T1〜T3 と T5 は調査ごとに答える。T4 は 2 つの調査を合わせて「証拠が無い」を判定する。T6 は 2 つの調査を突き合わせる。写像のモジュールと合わせたグラフに対して実行する。
+# 転移の証拠の CQ（証拠のモジュール 0.3.0）。調査が 3 つある。T1〜T3 と T5 は調査ごとに答える。T4 は 3 つの調査を合わせて「証拠が無い」を判定する。T6 は最初の 2 つの調査を突き合わせる。T7 は 3 つめの調査だけが持つ値を使う。写像のモジュールと合わせたグラフに対して実行する。
 # 行の見出しの記号を、この説明の中に書かない（分割に使う）。
 
 ### CQ-T1: 語ごとの要約 — 証拠の数、matched の平均、名前の合うラベルが最良のほかのラベルを上回る組の数、判定の内訳
@@ -41,3 +41,10 @@ SELECT ?s ?t ?v1 ?v2 ?tp WHERE {
     ?e2 a evd:TransferEvidence ; evd:fromStudy evd:CrossDatasetTransfer2026b ; evd:sourceMapping ?s ; evd:targetMapping ?t ; evd:preregisteredVerdict ?v2 ; evd:sourceTrainingPositives ?tp .
     FILTER ((?v1 = evd:Supported) != (?v2 = evd:Supported))
 } ORDER BY ?s ?t
+
+### CQ-T7: 基本感情の語ごとに、最も分けにくい別の基本感情 — 3 つめの調査で、別の基本感情のラベルのうち最良だったものの写す先ごとの、組の数と、名前の合うラベルがそれを上回る組の数
+SELECT ?term ?rival (COUNT(?e) AS ?n) (SUM(IF(?m > ?bb, 1, 0)) AS ?matchedAhead) (AVG(xsd:double(?m) - xsd:double(?bb)) AS ?meanDifference)
+WHERE {
+    ?e a evd:TransferEvidence ; evd:fromStudy evd:CrossDatasetTransfer2026c ; evd:sourceMapping ?s ; evd:matchedAuc ?m ; evd:bestOtherBasicAuc ?bb ; evd:mostFrequentBestOtherBasicMapping ?r .
+    ?s map:mapsTo ?term . ?r map:mapsTo ?rival .
+} GROUP BY ?term ?rival ORDER BY ?term DESC(?n)
